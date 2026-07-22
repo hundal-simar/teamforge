@@ -1,4 +1,4 @@
-import {loginController, registerController, refreshTokenController,refreshTokenController, getmeController } from '../controllers/authController.js';
+import {loginController, registerController, refreshTokenController,refreshTokenController, getmeController, logoutController } from '../controllers/authController.js';
 import express from 'express';
 import protect from '../middlewares/protect.js';
 import { validate } from '../middlewares/validate.js';
