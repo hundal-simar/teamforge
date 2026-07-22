@@ -1,18 +1,34 @@
 import React from "react";
-import { useState, useContext } from "react";
-import { AuthContext } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
-import {useForm} from "react-hook-form";
+import { useAuth } from "../context/AuthContext";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useForm } from "react-hook-form";
 
 function Register() {
-  const { register } = useContext(AuthContext);
+  const { register } = useAuth();
   const navigate = useNavigate();
-  const { register: formRegister, handleSubmit } = useForm();
+  const [searchParams] = useSearchParams();
+  const { register: formRegister, handleSubmit } = useForm({
+    defaultValues: {
+      email: searchParams.get("email") || "",
+    },
+  });
 
   const onSubmit = async (data) => {
     try {
-      await register(data);
-      navigate("/");
+      const inviteToken = localStorage.getItem("pendingInviteToken");
+
+      const result = await register({
+        ...data,
+        inviteToken: inviteToken || undefined,
+      });
+
+      localStorage.removeItem("pendingInviteToken");
+
+      if (result?.joinedWorkspace) {
+        navigate(`/workspace/${result.joinedWorkspace.slug}`);
+      } else {
+        navigate("/");
+      }
     } catch (error) {
       console.error("Registration failed:", error);
     }

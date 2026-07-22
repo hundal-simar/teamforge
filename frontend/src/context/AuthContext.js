@@ -39,6 +39,7 @@ export const AuthProvider = ({children})=>{
             const response = await api.post('/auth/register', userData);
             await fetchUser(); // Fetch user data after successful registration
             setUser(response.data);
+            return response.data;
         } catch (error) {
             console.error('Registration error:', error);
             throw error;
@@ -69,3 +70,5 @@ export const useAuth = () => {
     }
     return context;
 };
+
+export default AuthContext;
