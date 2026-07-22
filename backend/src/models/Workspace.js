@@ -37,6 +37,9 @@ const workspaceSchema = new mongoose.Schema({
             type: String,
             required: true
         },
+        role: {
+            enum: ['admin','member']
+        },
         expiresAt: {
             type: Date,
             required: true
