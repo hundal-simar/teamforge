@@ -4,6 +4,7 @@ import Register from "../pages/Register";
 import Workspace from "../pages/Workspace";
 import Project from "../pages/Project";
 import JoinWorkspace from "../pages/JoinWorkspace";
+import BoardPage from "../pages/BoardPage";
 
 const router = createBrowserRouter([
   {
@@ -19,12 +20,16 @@ const router = createBrowserRouter([
     element: <Workspace />,
   },
   {
-    path: "/projects/:projectId",
+    path: "/workspaces/:workspaceId/projects",
     element: <Project />,
   },
   {
     path: "/join/:token",
     element : <JoinWorkspace/>
+  },
+  {
+    path: "/projects/:projectId",
+    element : <BoardPage/>
   },
 ]);
 
