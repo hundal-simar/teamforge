@@ -1,5 +1,6 @@
-const Workspace = require('../models/workspaceModel');
-const User = require('../models/userModel');
+import Workspace from '../models/Workspace';
+import User from '../models/User';
+
 
 const isOwner = async (req, res, next) => {
   try {
@@ -16,4 +17,4 @@ const isOwner = async (req, res, next) => {
   }
 };
 
-module.exports = isOwner;
+export default isOwner;

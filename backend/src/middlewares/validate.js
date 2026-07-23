@@ -1,9 +1,12 @@
-export const validate = (schema) => {
-    return (req, res, next) => {
-        const { error } = schema.validate(req.body);
-        if (error) {
-            return res.status(400).json({ message: error.details[0].message });
-        }
-        next();
-    };
+ const validate = (schema) => {
+  return (req, res, next) => {
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ message: result.error.issues[0].message });
+    }
+    req.body = result.data; // parsed/coerced data (e.g. defaults applied)
+    next();
+  };
 };
+
+export default validate;

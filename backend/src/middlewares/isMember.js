@@ -1,5 +1,5 @@
-const Workspace = require('../models/workspaceModel');
-const User = require('../models/userModel');
+import Workspace from '../models/Workspace';
+import User from '../models/User';
 
 const isMember = async (req, res, next) => {
   try {
@@ -17,4 +17,4 @@ const isMember = async (req, res, next) => {
   }
 };
 
-module.exports = isMember;
+export default isMember;
