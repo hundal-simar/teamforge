@@ -1,6 +1,6 @@
 import Task from '../models/Task.js';
 import Project from '../models/Project.js';
-import { emitToProject } from '../socket/socketServer.js';
+import { emitToProject } from '../config/socket.js';
 
 
 const ORDER_GAP = 1000; // initial spacing so early inserts don't need renormalizing soon

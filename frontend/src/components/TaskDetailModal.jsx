@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
+import { useSocket } from '../context/SocketContext';
+
 
 export default function TaskDetailModal({ taskId, onClose, onUpdated }) {
   const [task, setTask] = useState(null);
@@ -8,6 +10,7 @@ export default function TaskDetailModal({ taskId, onClose, onUpdated }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const [descDraft, setDescDraft] = useState('');
+  const { socket } = useSocket();
 
   useEffect(() => {
     const fetchTask = async () => {
@@ -87,6 +90,20 @@ export default function TaskDetailModal({ taskId, onClose, onUpdated }) {
       setTask(previous);
     }
   };
+
+  useEffect(() => {
+  if (!socket) return;
+
+  const handleTaskUpdate = (updatedTask) => {
+    if (updatedTask._id === taskId) {
+      setTask(updatedTask);
+      onUpdated?.(updatedTask);
+    }
+  };
+
+  socket.on('task:updated', handleTaskUpdate);
+  return () => socket.off('task:updated', handleTaskUpdate);
+}, [socket, taskId]);
 
   if (loading || !task) {
     return (
