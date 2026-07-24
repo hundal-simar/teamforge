@@ -1,5 +1,7 @@
 import Task from '../models/Task.js';
 import Project from '../models/Project.js';
+import { emitToProject } from '../socket/socketServer.js';
+
 
 const ORDER_GAP = 1000; // initial spacing so early inserts don't need renormalizing soon
 
@@ -29,7 +31,10 @@ const createTask = async (req, res) => {
       labels,
     });
 
+    await task.save();
+    emitToProject(projectId, 'task:updated', task);
     res.status(201).json(task);
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error creating task' });
@@ -56,6 +61,7 @@ const updateTask = async (req, res) => {
     const task = req.task;
     Object.assign(task, req.body); // only validated fields land here via Zod
     await task.save();
+    emitToProject(task.project.toString(), 'task:updated', task);
     res.status(200).json(task);
   } catch (err) {
     console.error(err);
@@ -74,7 +80,7 @@ const updateTaskStatus = async (req, res) => {
     task.columnId = columnId;
     task.order = order;
     await task.save();
-
+    emitToProject(task.project.toString(), 'task:moved', task);
     res.status(200).json(task);
   } catch (err) {
     console.error(err);
@@ -90,7 +96,7 @@ const addSubtask = async (req, res) => {
 
     task.subtasks.push({ title, isDone: false });
     await task.save();
-
+    emitToProject(task.project.toString(), 'task:updated', task);
     res.status(201).json(task);
   } catch (err) {
     console.error(err);
@@ -110,7 +116,7 @@ const toggleSubtask = async (req, res) => {
 
     subtask.isDone = isDone;
     await task.save();
-
+    emitToProject(task.project.toString(), 'task:updated', task);
     res.status(200).json(task);
   } catch (err) {
     console.error(err);
@@ -129,7 +135,7 @@ const deleteSubtask = async (req, res) => {
 
     subtask.deleteOne();
     await task.save();
-
+    emitToProject(task.project.toString(), 'task:updated', task);
     res.status(200).json(task);
   } catch (err) {
     console.error(err);
