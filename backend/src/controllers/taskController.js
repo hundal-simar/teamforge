@@ -82,4 +82,64 @@ const updateTaskStatus = async (req, res) => {
   }
 };
 
-export { createTask, listTasks, updateTask, updateTaskStatus };
+// POST /api/tasks/:id/subtasks
+const addSubtask = async (req, res) => {
+  try {
+    const task = req.task; // attached by isTaskMember
+    const { title } = req.body;
+
+    task.subtasks.push({ title, isDone: false });
+    await task.save();
+
+    res.status(201).json(task);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error adding subtask' });
+  }
+};
+
+// PATCH /api/tasks/:id/subtasks/:subtaskId/toggle
+const toggleSubtask = async (req, res) => {
+  try {
+    const task = req.task;
+    const { subtaskId } = req.params;
+    const { isDone } = req.body;
+
+    const subtask = task.subtasks.id(subtaskId);
+    if (!subtask) return res.status(404).json({ message: 'Subtask not found' });
+
+    subtask.isDone = isDone;
+    await task.save();
+
+    res.status(200).json(task);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error updating subtask' });
+  }
+};
+
+// DELETE /api/tasks/:id/subtasks/:subtaskId
+const deleteSubtask = async (req, res) => {
+  try {
+    const task = req.task;
+    const { subtaskId } = req.params;
+
+    const subtask = task.subtasks.id(subtaskId);
+    if (!subtask) return res.status(404).json({ message: 'Subtask not found' });
+
+    subtask.deleteOne();
+    await task.save();
+
+    res.status(200).json(task);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error deleting subtask' });
+  }
+};
+
+const getTaskDetail = async (req, res) => {
+  const task = await req.task.populate('assignedTo', 'name email');
+  res.status(200).json(task);
+};
+
+export { createTask, listTasks, updateTask, updateTaskStatus, addSubtask, toggleSubtask, deleteSubtask, getTaskDetail };

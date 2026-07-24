@@ -1,13 +1,20 @@
 import express from 'express';
-import { updateTask, updateTaskStatus } from '../controllers/taskController.js';
+import { updateTask, updateTaskStatus, addSubtask, toggleSubtask, deleteSubtask } from '../controllers/taskController.js';
 import protect from '../middlewares/protect.js';
 import isTaskMember from '../middlewares/isTaskMember.js';
 import { validate } from '../middlewares/validate.js';
-import { updateTaskSchema, updateTaskStatusSchema } from '../validators/task.validator.js';
+import { updateTaskSchema, updateTaskStatusSchema, addSubtaskSchema, toggleSubtaskSchema, getTaskDetail } from '../validators/task.validator.js';
 
 const router = express.Router();
 
 router.patch('/:id', protect, isTaskMember, validate(updateTaskSchema), updateTask);
 router.patch('/:id/status', protect, isTaskMember, validate(updateTaskStatusSchema), updateTaskStatus);
+router.get('/:id', protect, isTaskMember, getTaskDetail);
+
+
+
+router.post('/:id/subtasks', protect, isTaskMember, validate(addSubtaskSchema), addSubtask);
+router.patch('/:id/subtasks/:subtaskId/toggle', protect, isTaskMember, validate(toggleSubtaskSchema), toggleSubtask);
+router.delete('/:id/subtasks/:subtaskId', protect, isTaskMember, deleteSubtask);
 
 export default router;

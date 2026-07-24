@@ -25,3 +25,11 @@ export const updateTaskStatusSchema = z.object({
   columnId: z.string().min(1, 'columnId is required'),
   order: z.number({ required_error: 'order is required' }),
 });
+
+export const addSubtaskSchema = z.object({
+  title: z.string().trim().min(1, 'Subtask title is required'),
+});
+
+export const toggleSubtaskSchema = z.object({
+  isDone: z.boolean(),
+});
