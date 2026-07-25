@@ -1,5 +1,5 @@
 import express from 'express';
-import { updateTask, updateTaskStatus, addSubtask, toggleSubtask, deleteSubtask } from '../controllers/taskController.js';
+import { updateTask, updateTaskStatus, addSubtask, toggleSubtask, deleteSubtask , deleteTask} from '../controllers/taskController.js';
 import protect from '../middlewares/protect.js';
 import isTaskMember from '../middlewares/isTaskMember.js';
 import { validate } from '../middlewares/validate.js';
@@ -12,6 +12,7 @@ const router = express.Router();
 router.patch('/:id', protect, isTaskMember, validate(updateTaskSchema), updateTask);
 router.patch('/:id/status', protect, isTaskMember, validate(updateTaskStatusSchema), updateTaskStatus);
 router.get('/:id', protect, isTaskMember, getTaskDetail);
+router.delete('/:id', protect, isTaskMember, deleteTask);
 
 
 

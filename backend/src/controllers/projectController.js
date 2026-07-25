@@ -65,6 +65,14 @@ const updateColumns = async (req, res) => {
     const project = req.project; 
 
     project.columns = columns;
+
+    await logActivity({
+    entityType: 'Project',
+    entityId: project._id,
+    action: 'columns_updated',
+    userId: req.user._id,
+    metadata: { columnCount: columns.length },
+  });
     await project.save();
 
     res.status(200).json(project);

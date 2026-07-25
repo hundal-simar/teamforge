@@ -71,10 +71,10 @@ export default function TaskCard({ task, onOpen }) {
         )}
         {task.assignedTo && (
           <span
-            title={task.assignedTo.name}
+            title={task.assignedTo.username}
             className="ml-auto w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] font-semibold flex items-center justify-center"
           >
-            {task.assignedTo.name?.charAt(0).toUpperCase()}
+            {task.assignedTo.username?.charAt(0).toUpperCase()}
           </span>
         )}
       </div>

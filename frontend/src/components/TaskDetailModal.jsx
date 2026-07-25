@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
 import { useSocket } from '../context/SocketContext';
+import CommentThread from './CommentThread';
 
 
-export default function TaskDetailModal({ taskId, onClose, onUpdated }) {
+
+export default function TaskDetailModal({ taskId, onClose, onUpdated, workspaceMembers }) {
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
   const [newSubtask, setNewSubtask] = useState('');
@@ -168,7 +170,7 @@ export default function TaskDetailModal({ taskId, onClose, onUpdated }) {
 
           {task.assignedTo && (
             <div className="text-sm text-gray-600 self-end">
-              Assigned to: <strong>{task.assignedTo.name}</strong>
+              Assigned to: <strong>{task.assignedTo.username}</strong>
             </div>
           )}
         </div>
@@ -222,6 +224,7 @@ export default function TaskDetailModal({ taskId, onClose, onUpdated }) {
             </button>
           </form>
         </div>
+        <CommentThread taskId={taskId} workspaceMembers={workspaceMembers} />
       </div>
     </div>
   );

@@ -41,7 +41,7 @@ function Register() {
         <input
           type="text"
           placeholder="Name"
-          {...formRegister("name", { required: true })}
+          {...formRegister("username", { required: true })}
         />
         <input
           type="email"

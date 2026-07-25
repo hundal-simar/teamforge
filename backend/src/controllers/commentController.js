@@ -16,7 +16,7 @@ const createComment = async (req, res) => {
       mentions,
     });
 
-    const populated = await comment.populate('author', 'name email');
+    const populated = await comment.populate('author', 'username email');
 
     await logActivity({
       entityType: 'Task',
@@ -40,8 +40,8 @@ const getComments = async (req, res) => {
   try {
     const { id: taskId } = req.params;
     const comments = await Comment.find({ task: taskId })
-      .populate('author', 'name email')
-      .populate('mentions', 'name email')
+      .populate('author', 'username email')
+      .populate('mentions', 'username email')
       .sort({ createdAt: 1 });
 
     res.status(200).json(comments);
@@ -65,6 +65,14 @@ const deleteComment = async (req, res) => {
     }
 
     await comment.deleteOne();
+
+    await logActivity({
+    entityType: 'Task',
+    entityId: req.task._id,
+    action: 'comment_deleted',
+    userId: req.user._id,
+    metadata: { commentId },
+  });
     emitToProject(req.task.project.toString(), 'comment:deleted', { commentId, taskId: req.task._id });
 
     res.status(200).json({ message: 'Comment deleted' });

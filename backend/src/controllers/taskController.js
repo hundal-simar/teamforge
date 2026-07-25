@@ -35,7 +35,16 @@ const createTask = async (req, res) => {
 
     await task.save();
     emitToProject(projectId, 'task:updated', task);
+
+    await logActivity({
+    entityType: 'Task',
+    entityId: task._id,
+    action: 'task_created',
+    userId: req.user._id,
+    metadata: { title: task.title, columnId: task.columnId },
+  });
     res.status(201).json(task);
+
 
   } catch (err) {
     console.error(err);
@@ -48,7 +57,9 @@ const createTask = async (req, res) => {
 const listTasks = async (req, res) => {
   try {
     const { id: projectId } = req.params;
-    const tasks = await Task.find({ project: projectId }).sort({ columnId: 1, order: 1 });
+    const tasks = await Task.find({ project: projectId })
+  .populate('assignedTo', 'username email')
+  .sort({ columnId: 1, order: 1 });
     res.status(200).json(tasks);
   } catch (err) {
     console.error(err);
@@ -153,8 +164,31 @@ const deleteSubtask = async (req, res) => {
 };
 
 const getTaskDetail = async (req, res) => {
-  const task = await req.task.populate('assignedTo', 'name email');
+  const task = await req.task.populate('assignedTo', 'username email');
   res.status(200).json(task);
 };
 
-export { createTask, listTasks, updateTask, updateTaskStatus, addSubtask, toggleSubtask, deleteSubtask, getTaskDetail };
+const deleteTask = async (req, res) => {
+  try {
+    const task = req.task;
+    const projectId = task.project.toString();
+
+    await task.deleteOne();
+
+    await logActivity({
+      entityType: 'Task',
+      entityId: task._id,
+      action: 'task_deleted',
+      userId: req.user._id,
+      metadata: { title: task.title },
+    });
+
+    emitToProject(projectId, 'task:deleted', { taskId: task._id });
+    res.status(200).json({ message: 'Task deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error deleting task' });
+  }
+};
+
+export { createTask, listTasks, updateTask, updateTaskStatus, addSubtask, toggleSubtask, deleteSubtask, getTaskDetail, deleteTask };

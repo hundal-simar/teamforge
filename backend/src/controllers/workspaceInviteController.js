@@ -43,6 +43,14 @@ export const inviteTeammate = async (req, res) => {
     const inviteLink = `${process.env.CLIENT_URL}/join/${token}`;
     await sendInviteEmail(email, workspace.name, inviteLink);
 
+    await logActivity({
+    entityType: 'Workspace',
+    entityId: workspace._id,
+    action: 'invite_sent',
+    userId: req.user._id,
+    metadata: { invitedEmail: email },
+  });
+
     res.status(200).json({ message: 'Invite sent successfully' });
   } catch (err) {
     console.error(err);

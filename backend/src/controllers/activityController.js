@@ -44,7 +44,7 @@ export const getProjectActivity = async (req, res) => {
           metadata: 1,
           createdAt: 1,
           'userInfo._id': 1,
-          'userInfo.name': 1,
+          'userInfo.username': 1,
           'userInfo.email': 1,
         },
       },

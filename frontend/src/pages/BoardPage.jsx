@@ -13,6 +13,10 @@ import BoardColumn from '../components/BoardColumn';
 import TaskDetailModal from '../components/TaskDetailModal';
 import { computeOrder } from '../utils/ordering';
 import { useSocket } from '../context/SocketContext';
+import ActivityFeed from '../components/ActivityFeed';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchWorkspaceMembers } from '../features/workspace/workspaceSlice'; 
+
 
 
 export default function BoardPage() {
@@ -23,6 +27,8 @@ export default function BoardPage() {
   const [openTaskId, setOpenTaskId] = useState(null);
   const { socket } = useSocket();
   const [viewerCount, setViewerCount] = useState(0);
+  const dispatch = useDispatch();
+  const members = useSelector((state) => state.workspace.members);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -111,6 +117,14 @@ export default function BoardPage() {
   };
 }, [socket, projectId]);
 
+useEffect(() => {
+  if (project?.workspace) {
+    
+    const workspaceId = typeof project.workspace === 'string' ? project.workspace : project.workspace._id;
+    dispatch(fetchWorkspaceMembers(workspaceId));
+  }
+}, [project, dispatch]);
+
   if (loading) return <p className="p-4 text-sm text-gray-500">Loading board...</p>;
   if (!project) return <p className="p-4 text-sm text-gray-500">Project not found.</p>;
 
@@ -142,9 +156,15 @@ export default function BoardPage() {
         </div>
       </DndContext>
 
-      {openTaskId && (
-        <TaskDetailModal taskId={openTaskId} onClose={() => setOpenTaskId(null)} onUpdated={handleTaskUpdated} />
-      )}
+  {openTaskId && (
+  <TaskDetailModal
+    taskId={openTaskId}
+    onClose={() => setOpenTaskId(null)}
+    onUpdated={handleTaskUpdated}
+    workspaceMembers={members}
+  />
+)}
+      <ActivityFeed projectId={projectId} />
     </div>
   );
 }
