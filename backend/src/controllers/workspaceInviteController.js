@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import Workspace from '../models/Workspace.js';
 import User from '../models/User.js';
 import { sendInviteEmail } from '../utils/mailer.js';
+import { logActivity } from '../services/activityLogger.js';
 
 const INVITE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -80,6 +81,13 @@ export const acceptInvite = async (req, res) => {
     if (!alreadyMember) {
       // use the role stored on the invite token, not a hardcoded default
       workspace.members.push({ user: invitedUser._id, role: inviteEntry.role });
+      await logActivity({
+      entityType: 'Workspace',
+      entityId: workspace._id,
+      action: 'member_joined',
+      userId: invitedUser._id,
+      metadata: { role: inviteEntry.role },
+    });
     }
 
     workspace.inviteTokens = workspace.inviteTokens.filter((t) => t.token !== token);

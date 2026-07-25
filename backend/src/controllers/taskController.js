@@ -1,6 +1,8 @@
 import Task from '../models/Task.js';
 import Project from '../models/Project.js';
 import { emitToProject } from '../config/socket.js';
+import { logActivity } from '../services/activityLogger.js';
+
 
 
 const ORDER_GAP = 1000; // initial spacing so early inserts don't need renormalizing soon
@@ -61,6 +63,13 @@ const updateTask = async (req, res) => {
     const task = req.task;
     Object.assign(task, req.body); // only validated fields land here via Zod
     await task.save();
+    await logActivity({
+    entityType: 'Task',
+    entityId: task._id,
+    action: 'task_moved',
+    userId: req.user._id,
+    metadata: { toColumnId: task.columnId },
+  });
     emitToProject(task.project.toString(), 'task:updated', task);
     res.status(200).json(task);
   } catch (err) {

@@ -1,4 +1,5 @@
 import Project from "../models/Project";
+import { logActivity } from '../services/activityLogger.js';
 
 const DEFAULT_COLUMNS = [
   { id: 'todo', name: 'To Do', order: 0 },
@@ -19,6 +20,15 @@ const createProject = async (req, res) => {
       workspace: id,
       columns: DEFAULT_COLUMNS,
     });
+
+    const project = await Project.create({ /* ... */ });
+    await logActivity({
+    entityType: 'Project',
+    entityId: project._id,
+    action: 'project_created',
+    userId: req.user._id,
+    metadata: { name: project.name },
+  });
 
     res.status(201).json(project);
   } catch (err) {
