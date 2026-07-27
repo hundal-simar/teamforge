@@ -1,6 +1,8 @@
 import Comment from '../models/Comment.js';
 import { logActivity } from '../services/activityLogger.js';
-import { emitToProject } from '../socket/socketServer.js';
+import { emitToProject } from '../config/socket.js';
+import { createNotification } from '../services/notificationService.js';
+
 
 // POST /api/tasks/:id/comments
 // isTaskMember already ran, attached req.task
@@ -27,6 +29,21 @@ const createComment = async (req, res) => {
     });
 
     emitToProject(task.project.toString(), 'comment:added', populated);
+
+    for (const mentionedUserId of mentions) {
+     if (mentionedUserId.toString() !== req.user._id.toString()) {
+     await createNotification({
+      userId: mentionedUserId,
+      type: 'mention',
+      payload: {
+        taskId: task._id.toString(),
+        projectId: task.project.toString(),
+        actorUsername: req.user.username,
+        commentId: comment._id.toString(),
+      },
+    });
+  }
+}
 
     res.status(201).json(populated);
   } catch (err) {

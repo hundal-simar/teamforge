@@ -6,6 +6,8 @@ import { validate } from '../middlewares/validate.js';
 import { updateTaskSchema, updateTaskStatusSchema, addSubtaskSchema, toggleSubtaskSchema, getTaskDetail } from '../validators/task.validator.js';
 import { createComment, getComments, deleteComment } from '../controllers/commentController.js';
 import { createCommentSchema } from '../validators/comment.validator.js';
+import upload from '../middlewares/upload.js';
+import { addAttachment, deleteAttachment } from '../controllers/attachmentController.js';
 
 const router = express.Router();
 
@@ -23,5 +25,8 @@ router.delete('/:id/subtasks/:subtaskId', protect, isTaskMember, deleteSubtask);
 router.post('/:id/comments', protect, isTaskMember, validate(createCommentSchema), createComment);
 router.get('/:id/comments', protect, isTaskMember, getComments);
 router.delete('/:id/comments/:commentId', protect, isTaskMember, deleteComment);
+
+router.post('/:id/attachments', protect, isTaskMember, upload.single('file'), addAttachment);
+router.delete('/:id/attachments/:attachmentId', protect, isTaskMember, deleteAttachment);
 
 export default router;

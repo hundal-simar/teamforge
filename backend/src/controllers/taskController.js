@@ -2,6 +2,7 @@ import Task from '../models/Task.js';
 import Project from '../models/Project.js';
 import { emitToProject } from '../config/socket.js';
 import { logActivity } from '../services/activityLogger.js';
+import { createNotification } from '../services/notificationService.js';
 
 
 
@@ -72,8 +73,21 @@ const listTasks = async (req, res) => {
 const updateTask = async (req, res) => {
   try {
     const task = req.task;
+    const previousAssignee = task.assignedTo?.toString();
     Object.assign(task, req.body); // only validated fields land here via Zod
     await task.save();
+
+    if (req.body.assignedTo && req.body.assignedTo !== previousAssignee && req.body.assignedTo !== req.user._id.toString()) {
+    await createNotification({
+    userId: req.body.assignedTo,
+    type: 'assignment',
+    payload: {
+      taskId: task._id.toString(),
+      projectId: task.project.toString(),
+      actorUsername: req.user.username,
+    },
+  });
+}
     await logActivity({
     entityType: 'Task',
     entityId: task._id,

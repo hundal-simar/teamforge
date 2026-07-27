@@ -5,6 +5,8 @@ import authRoutes from './routes/authRoutes.js';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import multer from 'multer';
+
 
 dotenv.config();
 
@@ -44,6 +46,16 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 
 app.use('/api/auth', authRoutes);
+
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ message: err.message });
+  }
+  if (err.message?.includes('Unsupported file type')) {
+    return res.status(400).json({ message: err.message });
+  }
+  next(err);
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

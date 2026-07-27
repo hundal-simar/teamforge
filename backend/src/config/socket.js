@@ -41,6 +41,8 @@ export const initSocket = (server) => {
   io.on('connection', (socket) => {
     console.log(`Socket connected: ${socket.user._id}`);
 
+    socket.join(`user:${socket.user._id}`);
+
     socket.on('project:join', (projectId) => {
       socket.join(`project:${projectId}`);
       socket.currentProjectId = projectId;
@@ -95,6 +97,10 @@ const broadcastPresence = (projectId) => {
   const userMap = presenceMap.get(projectId);
   const count = userMap ? userMap.size : 0; // size of the Map = number of UNIQUE users, not sockets
   io.to(`project:${projectId}`).emit('presence:update', { projectId, count });
+};
+
+export const emitToUser = (userId, event, payload) => {
+  io.to(`user:${userId}`).emit(event, payload);
 };
 
 export const emitToProject = (projectId, event, payload) => {
