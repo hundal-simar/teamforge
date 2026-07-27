@@ -6,6 +6,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import multer from 'multer';
+import compression from 'compression';
+import { apiLimiter } from './middlewares/rateLimiters.js';
 
 
 dotenv.config();
@@ -41,9 +43,13 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(compression());
+
 const PORT = process.env.PORT || 5000;
 
 connectDB();
+
+app.use('/api', apiLimiter); 
 
 app.use('/api/auth', authRoutes);
 

@@ -3,6 +3,8 @@ import Project from '../models/Project.js';
 import { emitToProject } from '../config/socket.js';
 import { logActivity } from '../services/activityLogger.js';
 import { createNotification } from '../services/notificationService.js';
+import { cacheDel, boardCacheKey } from '../utils/cache.js';
+
 
 
 
@@ -35,6 +37,8 @@ const createTask = async (req, res) => {
     });
 
     await task.save();
+    await cacheDel(boardCacheKey(projectId));
+
     emitToProject(projectId, 'task:updated', task);
 
     await logActivity({
@@ -76,6 +80,8 @@ const updateTask = async (req, res) => {
     const previousAssignee = task.assignedTo?.toString();
     Object.assign(task, req.body); // only validated fields land here via Zod
     await task.save();
+    await cacheDel(boardCacheKey(task.project.toString()));
+
 
     if (req.body.assignedTo && req.body.assignedTo !== previousAssignee && req.body.assignedTo !== req.user._id.toString()) {
     await createNotification({
@@ -114,6 +120,8 @@ const updateTaskStatus = async (req, res) => {
     task.columnId = columnId;
     task.order = order;
     await task.save();
+    await cacheDel(boardCacheKey(task.project.toString()));
+
     emitToProject(task.project.toString(), 'task:moved', task);
     res.status(200).json(task);
   } catch (err) {
@@ -130,6 +138,7 @@ const addSubtask = async (req, res) => {
 
     task.subtasks.push({ title, isDone: false });
     await task.save();
+    await cacheDel(boardCacheKey(task.project.toString()));
     emitToProject(task.project.toString(), 'task:updated', task);
     res.status(201).json(task);
   } catch (err) {
@@ -150,6 +159,7 @@ const toggleSubtask = async (req, res) => {
 
     subtask.isDone = isDone;
     await task.save();
+    await cacheDel(boardCacheKey(task.project.toString()));
     emitToProject(task.project.toString(), 'task:updated', task);
     res.status(200).json(task);
   } catch (err) {
@@ -169,6 +179,7 @@ const deleteSubtask = async (req, res) => {
 
     subtask.deleteOne();
     await task.save();
+    await cacheDel(boardCacheKey(task.project.toString()));
     emitToProject(task.project.toString(), 'task:updated', task);
     res.status(200).json(task);
   } catch (err) {
@@ -188,6 +199,8 @@ const deleteTask = async (req, res) => {
     const projectId = task.project.toString();
 
     await task.deleteOne();
+    await cacheDel(boardCacheKey(projectId));
+
 
     await logActivity({
       entityType: 'Task',

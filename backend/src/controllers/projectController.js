@@ -1,5 +1,7 @@
 import Project from "../models/Project";
 import { logActivity } from '../services/activityLogger.js';
+import { cacheDel, boardCacheKey } from '../utils/cache.js';
+
 
 const DEFAULT_COLUMNS = [
   { id: 'todo', name: 'To Do', order: 0 },
@@ -74,6 +76,7 @@ const updateColumns = async (req, res) => {
     metadata: { columnCount: columns.length },
   });
     await project.save();
+    await cacheDel(boardCacheKey(project._id.toString()));
 
     res.status(200).json(project);
   } catch (err) {

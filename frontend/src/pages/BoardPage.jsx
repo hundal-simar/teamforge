@@ -8,27 +8,27 @@ import {
   useSensors,
   closestCenter,
 } from '@dnd-kit/core';
+import { useDispatch, useSelector } from 'react-redux';
 import api from '../api/axios';
 import BoardColumn from '../components/BoardColumn';
 import TaskDetailModal from '../components/TaskDetailModal';
+import ActivityFeed from '../components/ActivityFeed';
+import BoardSkeleton from '../components/BoardSkeleton';
 import { computeOrder } from '../utils/ordering';
 import { useSocket } from '../context/SocketContext';
-import ActivityFeed from '../components/ActivityFeed';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchWorkspaceMembers } from '../features/workspace/workspaceSlice'; 
-
-
+import { fetchWorkspaceMembers } from '../features/workspace/workspaceSlice';
 
 export default function BoardPage() {
   const { projectId } = useParams();
+  const dispatch = useDispatch();
+  const members = useSelector((state) => state.workspace.members);
+  const { socket } = useSocket();
+
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openTaskId, setOpenTaskId] = useState(null);
-  const { socket } = useSocket();
   const [viewerCount, setViewerCount] = useState(0);
-  const dispatch = useDispatch();
-  const members = useSelector((state) => state.workspace.members);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -36,22 +36,62 @@ export default function BoardPage() {
   );
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchBoard = async () => {
+      setLoading(true);
       try {
-        const [projectRes, tasksRes] = await Promise.all([
-          api.get(`/projects/${projectId}`),
-          api.get(`/projects/${projectId}/tasks`),
-        ]);
-        setProject(projectRes.data);
-        setTasks(tasksRes.data);
+        
+        const { data } = await api.get(`/projects/${projectId}/board`);
+        setProject(data.project);
+        setTasks(data.tasks);
       } catch (err) {
         console.error('Error loading board', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+    fetchBoard();
   }, [projectId]);
+
+  useEffect(() => {
+    if (project?.workspace) {
+      const workspaceId = typeof project.workspace === 'string' ? project.workspace : project.workspace._id;
+      dispatch(fetchWorkspaceMembers(workspaceId));
+    }
+  }, [project, dispatch]);
+
+  useEffect(() => {
+    if (!socket || !projectId) return;
+
+    socket.emit('project:join', projectId);
+
+    const handleTaskEvent = (updatedTask) => {
+      setTasks((prev) => {
+        const exists = prev.some((t) => t._id === updatedTask._id);
+        return exists
+          ? prev.map((t) => (t._id === updatedTask._id ? updatedTask : t))
+          : [...prev, updatedTask];
+      });
+    };
+
+    const handleTaskDeleted = ({ taskId }) => {
+      setTasks((prev) => prev.filter((t) => t._id !== taskId));
+    };
+
+    const handlePresence = ({ count }) => setViewerCount(count);
+
+    socket.on('task:updated', handleTaskEvent);
+    socket.on('task:moved', handleTaskEvent);
+    socket.on('task:deleted', handleTaskDeleted);
+    socket.on('presence:update', handlePresence);
+
+    return () => {
+      socket.emit('project:leave', projectId);
+      socket.off('task:updated', handleTaskEvent);
+      socket.off('task:moved', handleTaskEvent);
+      socket.off('task:deleted', handleTaskDeleted);
+      socket.off('presence:update', handlePresence);
+    };
+  }, [socket, projectId]);
 
   const tasksByColumn = (columnId) =>
     tasks.filter((t) => t.columnId === columnId).sort((a, b) => a.order - b.order);
@@ -76,6 +116,8 @@ export default function BoardPage() {
     const newOrder = computeOrder(prevTask, nextTask);
 
     const previousTasks = tasks;
+
+    
     setTasks((prev) =>
       prev.map((t) => (t._id === taskId ? { ...t, columnId: targetColumnId, order: newOrder } : t))
     );
@@ -88,82 +130,47 @@ export default function BoardPage() {
     }
   };
 
-  useEffect(() => {
-  if (!socket || !projectId) return;
-
-  socket.emit('project:join', projectId);
-
-  const handleTaskEvent = (updatedTask) => {
-    setTasks((prev) => {
-      const exists = prev.some((t) => t._id === updatedTask._id);
-      return exists
-        ? prev.map((t) => (t._id === updatedTask._id ? updatedTask : t))
-        : [...prev, updatedTask];
-    });
-  };
-
-  const handlePresence = ({ count }) => setViewerCount(count);
-
-  socket.on('task:updated', handleTaskEvent);
-  socket.on('task:moved', handleTaskEvent);
-  socket.on('presence:update', handlePresence);
-
-  // cleanup: leave the room and remove listeners when navigating away or projectId changes
-  return () => {
-    socket.emit('project:leave', projectId);
-    socket.off('task:updated', handleTaskEvent);
-    socket.off('task:moved', handleTaskEvent);
-    socket.off('presence:update', handlePresence);
-  };
-}, [socket, projectId]);
-
-useEffect(() => {
-  if (project?.workspace) {
-    
-    const workspaceId = typeof project.workspace === 'string' ? project.workspace : project.workspace._id;
-    dispatch(fetchWorkspaceMembers(workspaceId));
-  }
-}, [project, dispatch]);
-
-  if (loading) return <p className="p-4 text-sm text-gray-500">Loading board...</p>;
+  if (loading) return <BoardSkeleton />;
   if (!project) return <p className="p-4 text-sm text-gray-500">Project not found.</p>;
 
   const sortedColumns = [...project.columns].sort((a, b) => a.order - b.order);
 
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-semibold mb-4">{project.name}</h2>
-      <div className="flex items-center justify-between mb-4">
-  
-  {viewerCount > 0 && (
-    <span className="text-xs text-gray-500">
-      {viewerCount} {viewerCount === 1 ? 'person' : 'people'} viewing
-    </span>
-  )}
-</div>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div className="flex gap-4">
-          {sortedColumns.map((col) => (
-            <BoardColumn
-              key={col.id}
-              column={col}
-              tasks={tasksByColumn(col.id)}
-              projectId={projectId}
-              onTaskCreated={handleTaskCreated}
-              onOpenTask={setOpenTaskId}
-            />
-          ))}
+    <div className="flex">
+      <div className="flex-1 p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">{project.name}</h2>
+          {viewerCount > 0 && (
+            <span className="text-xs text-gray-500">
+              {viewerCount} {viewerCount === 1 ? 'person' : 'people'} viewing
+            </span>
+          )}
         </div>
-      </DndContext>
 
-  {openTaskId && (
-  <TaskDetailModal
-    taskId={openTaskId}
-    onClose={() => setOpenTaskId(null)}
-    onUpdated={handleTaskUpdated}
-    workspaceMembers={members}
-  />
-)}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <div className="flex gap-4">
+            {sortedColumns.map((col) => (
+              <BoardColumn
+                key={col.id}
+                column={col}
+                tasks={tasksByColumn(col.id)}
+                projectId={projectId}
+                onTaskCreated={handleTaskCreated}
+                onOpenTask={setOpenTaskId}
+              />
+            ))}
+          </div>
+        </DndContext>
+
+        {openTaskId && (
+          <TaskDetailModal
+            taskId={openTaskId}
+            onClose={() => setOpenTaskId(null)}
+            onUpdated={handleTaskUpdated}
+            workspaceMembers={members}
+          />
+        )}
+      </div>
       <ActivityFeed projectId={projectId} />
     </div>
   );

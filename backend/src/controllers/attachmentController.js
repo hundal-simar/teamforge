@@ -1,6 +1,8 @@
 import fs from 'fs/promises';
 import cloudinary from '../config/cloudinary.js';
 import { emitToProject } from '../socket/socketServer.js';
+import { cacheDel, boardCacheKey } from '../utils/cache.js';
+
 
 // POST /api/tasks/:id/attachments  (multipart/form-data, field name: 'file')
 export const addAttachment = async (req, res) => {
@@ -22,6 +24,7 @@ export const addAttachment = async (req, res) => {
       name: req.file.originalname,
     });
     await task.save();
+    await cacheDel(boardCacheKey(task.project.toString()));
 
     emitToProject(task.project.toString(), 'task:updated', task);
     res.status(201).json(task);
@@ -48,6 +51,7 @@ export const deleteAttachment = async (req, res) => {
 
     attachment.deleteOne();
     await task.save();
+    await cacheDel(boardCacheKey(task.project.toString()));
 
     emitToProject(task.project.toString(), 'task:updated', task);
     res.status(200).json(task);
