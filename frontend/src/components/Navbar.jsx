@@ -8,6 +8,9 @@ from "./WorkspaceSwitcher";
 import CreateWorkspaceModal
 from "./CreateWorkspaceModal";
 
+import NotificationBell from './NotificationBell';
+
+
 function Navbar() {
 
   const [
@@ -21,6 +24,8 @@ function Navbar() {
       <h2>
         TeamForge
       </h2>
+
+      <NotificationBell />
 
       <WorkspaceSwitcher />
 

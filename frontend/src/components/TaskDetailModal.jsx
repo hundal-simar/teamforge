@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import api from '../api/axios';
 import { useSocket } from '../context/SocketContext';
 import CommentThread from './CommentThread';
+import FileUploadZone from './FileUploadZone';
+
 
 
 
@@ -186,6 +188,15 @@ export default function TaskDetailModal({ taskId, onClose, onUpdated, workspaceM
             className="w-full text-sm border border-gray-300 rounded p-2 resize-y"
           />
         </div>
+
+        <FileUploadZone
+          taskId={taskId}
+          attachments={task.attachments}
+          onUpdated={(updatedTask) => {
+          setTask(updatedTask);
+         onUpdated?.(updatedTask);
+       }}
+     />
 
         <div>
           <label className="text-xs text-gray-500 block mb-2">
