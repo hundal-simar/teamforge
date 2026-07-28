@@ -3,6 +3,8 @@ import Workspace from '../models/Workspace.js';
 import User from '../models/User.js';
 import { sendInviteEmail } from '../utils/mailer.js';
 import { logActivity } from '../services/activityLogger.js';
+import { emailQueue } from '../queues/emailQueue.js';
+
 
 const INVITE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -41,8 +43,11 @@ export const inviteTeammate = async (req, res) => {
     await workspace.save();
 
     const inviteLink = `${process.env.CLIENT_URL}/join/${token}`;
-    await sendInviteEmail(email, workspace.name, inviteLink);
-
+   await emailQueue.add('invite', {
+   toEmail: email,
+   workspaceName: workspace.name,
+   inviteLink,
+  });
     await logActivity({
     entityType: 'Workspace',
     entityId: workspace._id,

@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/userModel.js';
 import dotenv from 'dotenv';
+import Workspace from '../models/Workspace.js'
 import { generateAccessToken, generateRefreshToken } from '../utils/generateToken.js';
 
 dotenv.config();
@@ -39,15 +40,15 @@ const login = async (req, res) => {
 };
 
 const register = async (req, res) => {
-  const { name, email, password } = req.body;
-    if (!name || !email || !password) {
+  const { username, email, password } = req.body;
+    if (!username || !email || !password) {
     return res.status(400).json({ message: 'Please provide name, email and password' });
   }
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
-    const user = await User.create({ name, email, password });
+    const user = await User.create({ username, email, password });
     const accessToken = generateAccessToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
     user.refreshToken = refreshToken;
@@ -73,10 +74,10 @@ const register = async (req, res) => {
 
       if (workspace && inviteEntry && inviteEntry.expiresAt > new Date()) {
         const alreadyMember = workspace.members.some(
-          (m) => m.user.toString() === newUser._id.toString()
+          (m) => m.user.toString() === user._id.toString()
         );
         if (!alreadyMember) {
-          workspace.members.push({ user: newUser._id, role: inviteEntry.role });
+          workspace.members.push({ user: user._id, role: inviteEntry.role });
         }
         workspace.inviteTokens = workspace.inviteTokens.filter((t) => t.token !== inviteToken);
         await workspace.save();

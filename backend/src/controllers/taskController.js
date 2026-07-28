@@ -78,6 +78,14 @@ const updateTask = async (req, res) => {
   try {
     const task = req.task;
     const previousAssignee = task.assignedTo?.toString();
+    if ('dueDate' in req.body) {
+      const newDueDate = req.body.dueDate ? new Date(req.body.dueDate).toISOString() : null;
+      const oldDueDate = task.dueDate ? task.dueDate.toISOString() : null;
+
+      if (newDueDate !== oldDueDate) {
+        task.remindedAt = null;
+      }
+    }
     Object.assign(task, req.body); // only validated fields land here via Zod
     await task.save();
     await cacheDel(boardCacheKey(task.project.toString()));

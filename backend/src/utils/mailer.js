@@ -20,3 +20,14 @@ export const sendInviteEmail = async (toEmail, workspaceName, inviteLink) => {
     `,
   });
 };
+
+export const sendDueDateReminderEmail = async (toEmail, taskTitle, dueDate) => {
+  await transporter.sendMail({
+    from: `"DevSync" <${process.env.GMAIL_USER}>`,
+    to: toEmail,
+    subject: `Reminder: "${taskTitle}" is due soon`,
+    html: `
+      <p>Your task <b>${taskTitle}</b> is due on ${new Date(dueDate).toLocaleDateString()}.</p>
+    `,
+  });
+};
