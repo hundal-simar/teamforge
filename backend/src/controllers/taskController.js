@@ -1,5 +1,6 @@
 import Task from '../models/Task.js';
 import Project from '../models/Project.js';
+import Workspace from '../models/Workspace.js';
 import { emitToProject } from '../config/socket.js';
 import { logActivity } from '../services/activityLogger.js';
 import { createNotification } from '../services/notificationService.js';
@@ -223,6 +224,36 @@ const deleteTask = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error deleting task' });
+  }
+};
+
+export const searchTasks = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { search, assignee, priority } = req.query;
+
+    
+    const myWorkspaces = await Workspace.find({
+      $or: [{ owner: userId }, { 'members.user': userId }],
+    }).distinct('_id');
+
+    const myProjectIds = await Project.find({ workspace: { $in: myWorkspaces } }).distinct('_id');
+
+    const filter = { project: { $in: myProjectIds } };
+    if (search) filter.$text = { $search: search };
+    if (assignee) filter.assignedTo = assignee;
+    if (priority) filter.priority = priority;
+
+    const tasks = await Task.find(filter)
+      .populate('assignedTo', 'username email')
+      .populate('project', 'name')
+      .sort(search ? { score: { $meta: 'textScore' } } : { createdAt: -1 })
+      .limit(50);
+
+    res.status(200).json(tasks);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error searching tasks' });
   }
 };
 

@@ -1,4 +1,4 @@
-import {createWorkspaceController, getWorkspaceController, getWorkspaceByIdController, getWorkspaceMembersController, getWorkspaceMemberbyIdController, updateWorkspaceMemberRoleController, deleteWorkspaceController} from '../controllers/workspaceController.js';
+import {createWorkspaceController, getWorkspaceController, getWorkspaceByIdController, getWorkspaceMembersController, getWorkspaceMemberbyIdController, updateWorkspaceMemberRoleController, deleteWorkspaceController, removeMember, rename} from '../controllers/workspaceController.js';
 import { workspaceSchema, roleSchema } from '../validators/workspace.validator.js';
 import restrictTo from '../middlewares/restrictTo.js';
 import isMember from '../middlewares/isMember.js';
@@ -20,5 +20,7 @@ router.put('/:id/members/:memberId', protect, validate(roleSchema), isOwner, upd
 router.delete('/:id', protect, isOwner, deleteWorkspaceController);
 router.post('/:id/invite', protect,restrictTo('admin','owner'), inviteTeammate);
 router.post('/join/:token', acceptInvite);
+router.delete('/:id/members/:memberId', protect, isOwner,restrictTo('admin','owner'), removeMember);
+router.patch('/:id', protect, restrictTo('owner','admin'), rename);
 
 export default router;

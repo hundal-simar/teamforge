@@ -72,5 +72,6 @@ const taskSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 taskSchema.index({ project: 1 });
+taskSchema.index({ title: 'text' });
 const Task = mongoose.model('Task', taskSchema);
 export default Task;
