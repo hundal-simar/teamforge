@@ -7,6 +7,7 @@ import express from 'express';
 import { validate } from '../middlewares/validate.js';
 import protect from '../middlewares/protect.js';
 import { inviteTeammate, acceptInvite } from '../controllers/workspaceInviteController.js';
+import isAdminOrOwner from '../middlewares/isAdminOrOwner.js';
 
 
 const router = express.Router();
@@ -18,9 +19,9 @@ router.get('/:id/members', protect, isMember, getWorkspaceMembersController);
 router.get('/:id/members/:memberId', protect, isMember, getWorkspaceMemberbyIdController);
 router.put('/:id/members/:memberId', protect, validate(roleSchema), isOwner, updateWorkspaceMemberRoleController);
 router.delete('/:id', protect, isOwner, deleteWorkspaceController);
-router.post('/:id/invite', protect,restrictTo('admin','owner'), inviteTeammate);
+router.post('/:id/invite', protect,isAdminOrOwner, inviteTeammate);
 router.post('/join/:token', acceptInvite);
-router.delete('/:id/members/:memberId', protect, isOwner,restrictTo('admin','owner'), removeMember);
-router.patch('/:id', protect, restrictTo('owner','admin'), rename);
+router.delete('/:id/members/:memberId', protect, isOwner,isAdminOrOwner , removeMember);
+router.patch('/:id', protect, isAdminOrOwner , rename);
 
 export default router;

@@ -17,6 +17,8 @@ import BoardSkeleton from '../components/BoardSkeleton';
 import { computeOrder } from '../utils/ordering';
 import { useSocket } from '../context/SocketContext';
 import { fetchWorkspaceMembers } from '../features/workspace/workspaceSlice';
+import Breadcrumbs from '../components/Breadcrumbs';
+
 
 export default function BoardPage() {
   const { projectId } = useParams();
@@ -136,7 +138,14 @@ export default function BoardPage() {
   const sortedColumns = [...project.columns].sort((a, b) => a.order - b.order);
 
   return (
+    
     <div className="flex">
+      <Breadcrumbs
+       items={[
+       { label: project.workspace?.name || 'Workspace', to: `/workspaces/${project.workspace?._id}` },
+       { label: project.name, to: `/projects/${projectId}` },
+      ]}
+    />
       <div className="flex-1 p-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">{project.name}</h2>
