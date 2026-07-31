@@ -18,6 +18,8 @@ import { computeOrder } from '../utils/ordering';
 import { useSocket } from '../context/SocketContext';
 import { fetchWorkspaceMembers } from '../features/workspace/workspaceSlice';
 import Breadcrumbs from '../components/Breadcrumbs';
+import FilterBar from '../components/FilterBar';
+
 
 
 export default function BoardPage() {
@@ -31,6 +33,9 @@ export default function BoardPage() {
   const [loading, setLoading] = useState(true);
   const [openTaskId, setOpenTaskId] = useState(null);
   const [viewerCount, setViewerCount] = useState(0);
+
+  const [filters, setFilters] = useState({ assignee: null, priority: null, label: null });
+
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -95,8 +100,15 @@ export default function BoardPage() {
     };
   }, [socket, projectId]);
 
-  const tasksByColumn = (columnId) =>
-    tasks.filter((t) => t.columnId === columnId).sort((a, b) => a.order - b.order);
+ const tasksByColumn = (columnId) =>
+  tasks
+    .filter((t) => t.columnId === columnId)
+    .filter((t) => !filters.assignee || t.assignedTo?._id === filters.assignee)
+    .filter((t) => !filters.priority || t.priority === filters.priority)
+    .filter((t) => !filters.label || t.labels?.includes(filters.label))
+    .sort((a, b) => a.order - b.order);
+  const hasActiveFilters = !!(filters.assignee || filters.priority || filters.label);
+
 
   const handleTaskCreated = (newTask) => setTasks((prev) => [...prev, newTask]);
   const handleTaskUpdated = (updatedTask) =>
@@ -155,6 +167,14 @@ export default function BoardPage() {
             </span>
           )}
         </div>
+
+        <FilterBar tasks={tasks} members={members} filters={filters} onChange={setFilters} />
+        {hasActiveFilters && (
+        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-1.5 mb-3">
+        Dragging is disabled while a filter is active — clear filters to reorder tasks.
+       </p>
+      )}
+
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <div className="flex gap-4">
