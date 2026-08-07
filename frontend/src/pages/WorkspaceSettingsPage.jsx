@@ -3,16 +3,20 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useAuth } from '../context/AuthContext';
+import Avatar from '../components/Avatar';
+import { useSocket } from '../context/SocketContext';
 
 export default function WorkspaceSettingsPage() {
   const { workspaceId } = useParams();
   const navigate = useNavigate();
+  const { socket } = useSocket();
   const { user } = useAuth();
 
   const [workspace, setWorkspace] = useState(null);
   const [nameDraft, setNameDraft] = useState('');
   const [loading, setLoading] = useState(true);
   const [confirmAction, setConfirmAction] = useState(null);
+  const [actionError, setActionError] = useState('');
 
   const fetchWorkspace = async () => {
     try {
@@ -30,6 +34,23 @@ export default function WorkspaceSettingsPage() {
     fetchWorkspace();
   }, [workspaceId]);
 
+  useEffect(() => {
+    if (!socket || !workspaceId) return;
+    socket.emit('workspace:join', workspaceId);
+
+    const refresh = () => fetchWorkspace();
+    socket.on('member:joined', refresh);
+    socket.on('member:removed', refresh);
+    socket.on('member:roleChanged', refresh);
+
+    return () => {
+      socket.emit('workspace:leave', workspaceId);
+      socket.off('member:joined', refresh);
+      socket.off('member:removed', refresh);
+      socket.off('member:roleChanged', refresh);
+    };
+  }, [socket, workspaceId]);
+
   const handleRename = async () => {
     if (nameDraft.trim() === workspace.name) return;
 
@@ -45,14 +66,12 @@ export default function WorkspaceSettingsPage() {
   };
 
   const handleRoleChange = async (memberId, newRole) => {
+    setActionError('');
     try {
-      await api.put(`/workspaces/${workspaceId}/members/${memberId}`, {
-        role: newRole,
-      });
-
+      await api.put(`/workspaces/${workspaceId}/members/${memberId}`, { role: newRole });
       fetchWorkspace();
     } catch (err) {
-      console.error('Failed to update role', err);
+      setActionError(err.response?.data?.message || 'Failed to update role');
     }
   };
 
@@ -78,17 +97,20 @@ export default function WorkspaceSettingsPage() {
 
   if (loading) {
     return (
-      <p className="p-6 text-sm text-gray-500">
-        Loading settings...
-      </p>
+      <div className="min-h-screen bg-zinc-950 p-6 sm:p-8 flex items-center justify-center text-sm text-zinc-400 selection:bg-indigo-500 selection:text-white">
+        <div className="flex items-center gap-3">
+          <div className="w-4 h-4 rounded-full border-2 border-indigo-500/20 border-t-indigo-500 animate-spin" />
+          <span>Loading settings...</span>
+        </div>
+      </div>
     );
   }
 
   if (!workspace) {
     return (
-      <p className="p-6 text-sm text-gray-500">
+      <div className="min-h-screen bg-zinc-950 p-6 flex items-center justify-center text-sm text-zinc-400">
         Workspace not found.
-      </p>
+      </div>
     );
   }
 
@@ -119,158 +141,166 @@ export default function WorkspaceSettingsPage() {
     currentUserRole === 'owner';
 
   return (
-    <div className="p-6 max-w-2xl">
-      <Link
-        to={`/workspaces/${workspaceId}`}
-        className="text-xs text-indigo-600 hover:underline"
-      >
-        ← Back to workspace
-      </Link>
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-4 sm:p-6 lg:p-8 flex items-center justify-center relative overflow-hidden selection:bg-indigo-500 selection:text-white antialiased">
+      {/* Background Radial Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-600/10 blur-[140px] rounded-full pointer-events-none" />
 
-      <h1 className="text-xl font-semibold mt-2 mb-6">
-        Workspace Settings
-      </h1>
+      {/* Main Glass Card */}
+      <div className="w-full max-w-2xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-xl rounded-2xl shadow-2xl p-6 sm:p-8 relative z-10 space-y-8">
+        
+        {/* Navigation & Header */}
+        <div>
+          <Link
+            to={`/workspaces/${workspaceId}`}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors mb-4 group"
+          >
+            <span className="group-hover:-translate-x-0.5 transition-transform">←</span> Back to workspace
+          </Link>
 
-      {/* Workspace Name */}
-      {canManage ? (
-        <section className="mb-8">
-          <label className="text-xs text-gray-500 block mb-1">
-            Workspace name
+          <h1 className="text-2xl font-extrabold text-white tracking-tight">
+            Workspace Settings
+          </h1>
+
+          <div className="flex items-center gap-2 mt-2">
+            <Avatar username={workspace.owner.username} avatarUrl={workspace.owner.avatar} size="xs" />
+            <p className="text-xs text-zinc-400">
+              Owned by <span className="font-medium text-zinc-200">{workspace.owner.username}</span>
+            </p>
+          </div>
+        </div>
+
+        {/* Action Error Notification */}
+        {actionError && (
+          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl animate-in fade-in duration-200">
+            <p className="text-xs text-red-400 font-medium text-center">{actionError}</p>
+          </div>
+        )}
+
+        {/* Workspace Name Section */}
+        <section className="space-y-2">
+          <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+            Workspace Name
           </label>
 
-          <div className="flex gap-2">
+          {canManage ? (
             <input
               type="text"
               value={nameDraft}
               onChange={(e) => setNameDraft(e.target.value)}
               onBlur={handleRename}
-              className="flex-1 text-sm border border-gray-300 rounded px-3 py-2"
+              className="w-full bg-zinc-950/60 border border-zinc-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-zinc-100 placeholder:text-zinc-500 rounded-xl px-4 py-2.5 text-sm outline-none transition-all duration-200"
             />
-          </div>
+          ) : (
+            <div className="p-3 bg-zinc-950/40 border border-zinc-800/50 rounded-xl">
+              <p className="text-sm font-medium text-zinc-200">{workspace.name}</p>
+            </div>
+          )}
         </section>
-      ) : (
-        <section className="mb-8">
-          <label className="text-xs text-gray-500 block mb-1">
-            Workspace name
-          </label>
 
-          <p className="text-sm text-gray-900">
-            {workspace.name}
-          </p>
-        </section>
-      )}
-
-      {/* Members */}
-      <section className="mb-8">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">
-          Members
-        </h2>
-
-        <ul className="space-y-2">
-          {workspace.members.map((member) => (
-            <li
-              key={member.user._id}
-              className="flex items-center justify-between border border-gray-100 rounded px-3 py-2"
-            >
-              <div>
-                <p className="text-sm text-gray-900">
-                  {member.user.username}
-                </p>
-
-                <p className="text-xs text-gray-500">
-                  {member.user.email}
-                </p>
-              </div>
-
-              {canManage ? (
-                <div className="flex items-center gap-2">
-                  <select
-                    value={member.role}
-                    onChange={(e) =>
-                      handleRoleChange(
-                        member.user._id,
-                        e.target.value
-                      )
-                    }
-                    className="text-xs border border-gray-300 rounded px-2 py-1"
-                  >
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
-                  </select>
-
-                  <button
-                    onClick={() =>
-                      setConfirmAction({
-                        type: 'removeMember',
-                        payload: member.user._id,
-                      })
-                    }
-                    className="text-xs text-red-600 hover:underline"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ) : (
-                <span className="text-xs text-gray-500 capitalize">
-                  {member.role}
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* Pending Invites */}
-      {canManage && pendingInvites.length > 0 && (
-        <section className="mb-8">
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">
-            Pending Invites
+        {/* Members Section */}
+        <section className="space-y-3">
+          <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+            Members
           </h2>
-
           <ul className="space-y-2">
-            {pendingInvites.map((invite) => (
-              <li
-                key={invite.token}
-                className="text-sm text-gray-600 border border-gray-100 rounded px-3 py-2"
-              >
-                {invite.email}{' '}
-                <span className="text-xs text-gray-400">
-                  ({invite.role})
-                </span>
-              </li>
-            ))}
+            {workspace.members.map((member) => {
+              const isOwnerRow = member.role === 'owner';
+              return (
+                <li
+                  key={member.user._id}
+                  className="flex items-center justify-between bg-zinc-950/40 border border-zinc-800/50 hover:border-zinc-700/60 transition-colors rounded-xl p-3"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar username={member.user.username} avatarUrl={member.user.avatar} size="sm" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-zinc-200 truncate">{member.user.username}</p>
+                      <p className="text-[11px] text-zinc-500 truncate">{member.user.email}</p>
+                    </div>
+                  </div>
+
+                  {isOwnerRow ? (
+                    <span className="text-[11px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg px-2.5 py-1">
+                      Owner
+                    </span>
+                  ) : canManage ? (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <select
+                        value={member.role}
+                        onChange={(e) => handleRoleChange(member.user._id, e.target.value)}
+                        className="bg-zinc-900 border border-zinc-700/70 text-zinc-200 text-xs rounded-lg px-2.5 py-1 focus:outline-none focus:border-indigo-500"
+                      >
+                        <option value="member">Member</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                      <button
+                        onClick={() => setConfirmAction({ type: 'removeMember', payload: member.user._id })}
+                        className="text-xs text-red-400 hover:text-red-300 font-medium transition-colors px-1 cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-zinc-500 capitalize font-medium">{member.role}</span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </section>
-      )}
 
-      {/* Danger Zone */}
-      {isOwnerUser && (
-        <section className="border-t border-gray-200 pt-6">
-          <h2 className="text-sm font-semibold text-red-600 mb-2">
-            Danger Zone
-          </h2>
+        {/* Pending Invites Section */}
+        {canManage && pendingInvites.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+              Pending Invites
+            </h2>
+            <ul className="space-y-2">
+              {pendingInvites.map((invite) => (
+                <li
+                  key={invite.token}
+                  className="flex items-center justify-between text-xs bg-zinc-950/30 border border-zinc-800/40 rounded-xl p-3"
+                >
+                  <span className="font-medium text-zinc-300">{invite.email}</span>
+                  <span className="text-[10px] font-semibold text-indigo-400 uppercase tracking-wider bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-md">
+                    {invite.role}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
-          <button
-            onClick={() =>
-              setConfirmAction({
-                type: 'deleteWorkspace',
-              })
-            }
-            className="text-sm bg-red-600 text-white rounded px-4 py-2 hover:bg-red-700"
-          >
-            Delete Workspace
-          </button>
-        </section>
-      )}
+        {/* Danger Zone */}
+        {isOwnerUser && (
+          <section className="border-t border-zinc-800/80 pt-6 space-y-3">
+            <h2 className="text-xs font-semibold text-red-400 uppercase tracking-wider">
+              Danger Zone
+            </h2>
+            <p className="text-xs text-zinc-500">
+              Permanently remove this workspace, including all associated projects, tasks, and data.
+            </p>
+            <button
+              onClick={() =>
+                setConfirmAction({
+                  type: 'deleteWorkspace',
+                })
+              }
+              className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-medium text-xs rounded-xl px-4 py-2.5 transition-all cursor-pointer"
+            >
+              Delete Workspace
+            </button>
+          </section>
+        )}
 
+      </div>
+
+      {/* Confirmation Modals */}
       {confirmAction?.type === 'removeMember' && (
         <ConfirmDialog
           title="Remove member?"
           message="This member will lose access to this workspace immediately."
           confirmLabel="Remove"
-          onConfirm={() =>
-            handleRemoveMember(confirmAction.payload)
-          }
+          onConfirm={() => handleRemoveMember(confirmAction.payload)}
           onCancel={() => setConfirmAction(null)}
         />
       )}

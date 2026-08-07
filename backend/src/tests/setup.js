@@ -1,12 +1,15 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
+import redis from '../config/redis.js';
 
 let mongoServer;
 
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
+  console.log('before connection')
   const uri = mongoServer.getUri();
   await mongoose.connect(uri);
+  console.log('after connection')
 });
 
 afterEach(async () => {
@@ -19,4 +22,5 @@ afterEach(async () => {
 afterAll(async () => {
   await mongoose.disconnect();
   await mongoServer.stop();
+
 });

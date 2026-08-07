@@ -4,7 +4,7 @@ import restrictTo from '../middlewares/restrictTo.js';
 import isMember from '../middlewares/isMember.js';
 import isOwner from '../middlewares/isOwner.js';
 import express from 'express';
-import { validate } from '../middlewares/validate.js';
+import  validate  from '../middlewares/validate.js';
 import protect from '../middlewares/protect.js';
 import { inviteTeammate, acceptInvite } from '../controllers/workspaceInviteController.js';
 import isAdminOrOwner from '../middlewares/isAdminOrOwner.js';

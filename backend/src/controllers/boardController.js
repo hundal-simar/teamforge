@@ -18,7 +18,7 @@ export const getBoard = async (req, res) => {
     if (!project) return res.status(404).json({ message: 'Project not found' });
 
     const tasks = await Task.find({ project: projectId })
-      .populate('assignedTo', 'username email')
+      .populate('assignedTo', 'username email avatar')
       .sort({ columnId: 1, order: 1 });
 
     const board = { project, tasks };

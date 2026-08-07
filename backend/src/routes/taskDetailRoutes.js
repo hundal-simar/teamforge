@@ -1,9 +1,9 @@
 import express from 'express';
-import { updateTask, updateTaskStatus, addSubtask, toggleSubtask, deleteSubtask , deleteTask} from '../controllers/taskController.js';
+import { updateTask, updateTaskStatus, addSubtask, toggleSubtask, deleteSubtask , deleteTask, getTaskDetail} from '../controllers/taskController.js';
 import protect from '../middlewares/protect.js';
 import isTaskMember from '../middlewares/isTaskMember.js';
-import { validate } from '../middlewares/validate.js';
-import { updateTaskSchema, updateTaskStatusSchema, addSubtaskSchema, toggleSubtaskSchema, getTaskDetail } from '../validators/task.validator.js';
+import  validate  from '../middlewares/validate.js';
+import { updateTaskSchema, updateTaskStatusSchema, addSubtaskSchema, toggleSubtaskSchema, createTaskSchema } from '../validators/task.validator.js';
 import { createComment, getComments, deleteComment } from '../controllers/commentController.js';
 import { createCommentSchema } from '../validators/comment.validator.js';
 import upload from '../middlewares/upload.js';

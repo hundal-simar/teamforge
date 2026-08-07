@@ -1,8 +1,8 @@
 import request from 'supertest';
 import app from './helpers/testApp.js';
 import { registerAndLogin } from './helpers/createTestUser.js';
-import Workspace from '../models/workspaceModel.js';
-import User from '../models/userModel.js';
+import Workspace from '../models/Workspace.js';
+import User from '../models/User.js';
 
 describe('Task CRUD permissions', () => {
   it('prevents a non-member from listing a project\'s tasks', async () => {

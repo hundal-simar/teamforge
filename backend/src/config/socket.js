@@ -1,6 +1,6 @@
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
-import cookie from 'cookie';
+import * as cookie from 'cookie';
 import User from '../models/User.js';
 
 let io;
@@ -9,6 +9,7 @@ let io;
 // the Set matters: if the same user opens 2 tabs, both socket ids are tracked,
 // but the user is only removed from presence once BOTH tabs disconnect
 const presenceMap = new Map();
+
 
 export const initSocket = (server) => {
   io = new Server(server, {
@@ -20,10 +21,16 @@ export const initSocket = (server) => {
 
   io.use(async (socket, next) => {
     try {
+      //console.log(cookie);
+      //console.log('handshake hit');
+      //console.log('Cookie header:',
+      
+
       const rawCookie = socket.handshake.headers.cookie;
       if (!rawCookie) return next(new Error('No cookies provided'));
 
-      const parsedCookies = cookie.parse(rawCookie);
+      const parsedCookies = cookie.parseCookie(rawCookie);
+      //console.log('Parsed cookies:', parsedCookies);
       const token = parsedCookies.token;
       if (!token) return next(new Error('No token provided'));
 
@@ -34,7 +41,9 @@ export const initSocket = (server) => {
       socket.user = user;
       next();
     } catch (err) {
-      next(new Error('Authentication failed'));
+       console.error(err);
+       next(err);
+     // next(new Error('Authentication failed'));
     }
   });
 
@@ -44,11 +53,11 @@ export const initSocket = (server) => {
     socket.join(`user:${socket.user._id}`);
 
     socket.on('project:join', (projectId) => {
-      socket.join(`project:${projectId}`);
-      socket.currentProjectId = projectId;
+    socket.join(`project:${projectId}`);
+    socket.currentProjectId = projectId;
 
-      addToPresence(projectId, socket.user._id.toString(), socket.id);
-      broadcastPresence(projectId);
+    addToPresence(projectId, socket.user._id.toString(), socket.id);
+    broadcastPresence(projectId);
     });
 
     socket.on('project:leave', (projectId) => {
@@ -61,6 +70,14 @@ export const initSocket = (server) => {
         removeFromPresence(socket.currentProjectId, socket.user._id.toString(), socket.id);
       }
     });
+
+    socket.on('workspace:join', (workspaceId) => {
+      socket.join(`workspace:${workspaceId}`);
+    });
+
+    socket.on('workspace:leave', (workspaceId) => {
+      socket.leave(`workspace:${workspaceId}`);
+   });
   });
 };
 
@@ -104,5 +121,10 @@ export const emitToUser = (userId, event, payload) => {
 };
 
 export const emitToProject = (projectId, event, payload) => {
+  if (!io)  return;
   io.to(`project:${projectId}`).emit(event, payload);
+};
+
+export const emitToWorkspace = (workspaceId, event, payload) => {
+  io.to(`workspace:${workspaceId}`).emit(event, payload);
 };

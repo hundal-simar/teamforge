@@ -1,31 +1,33 @@
 import {createWorkspace, getWorkspaces, getWorkspaceById, getWorkspaceMembers, getWorkspaceMemberbyId, updateWorkspaceMemberRole, deleteWorkspace} from '../services/workspaceService.js';
 import Workspace from '../models/Workspace.js';
+import Project from '../models/Project.js';
+import { emitToWorkspace } from '../config/socket.js';
 
-const createWorkspaceController = async (req, res) => {
+export const createWorkspaceController = async (req, res) => {
     await createWorkspace(req, res);
 }
 
-const getWorkspacesController = async (req, res) => {
+export const getWorkspaceController = async (req, res) => {
     await getWorkspaces(req, res);
 }
 
-const getWorkspaceByIdController = async (req, res) => {
+export const getWorkspaceByIdController = async (req, res) => {
     await getWorkspaceById(req, res);
 }
 
-const getWorkspaceMembersController = async (req, res) => {
+export const getWorkspaceMembersController = async (req, res) => {
     await getWorkspaceMembers(req, res);
 }
 
-const getWorkspaceMemberbyIdController = async (req, res) => {
+export const getWorkspaceMemberbyIdController = async (req, res) => {
     await getWorkspaceMemberbyId(req, res);
 }
 
-const updateWorkspaceMemberRoleController = async (req, res) => {
+export const updateWorkspaceMemberRoleController = async (req, res) => {
     await updateWorkspaceMemberRole(req, res);
 }
 
-const deleteWorkspaceController = async (req, res) => {
+export const deleteWorkspaceController = async (req, res) => {
     await deleteWorkspace(req, res);
 }
 
@@ -58,7 +60,6 @@ export const getMyWorkspaces = async (req, res) => {
     res.status(500).json({ message: 'Server error fetching workspace summaries' });
   }
 };
-
 export const removeMember = async (req, res) => {
   try {
     const { id, memberId } = req.params;
@@ -73,6 +74,8 @@ export const removeMember = async (req, res) => {
     workspace.members = workspace.members.filter((m) => m.user.toString() !== memberId);
     await workspace.save();
 
+    emitToWorkspace(id, 'member:removed', { memberId });
+
     res.status(200).json({ message: 'Member removed' });
   } catch (err) {
     console.error(err);
@@ -80,12 +83,12 @@ export const removeMember = async (req, res) => {
   }
 };
 
-export const rename= async (req,res)=>{
-    try{
-         const {id}=req.params;
-         const {name}= req.body;
-         const workspace= await Workspace.findById(id);
-         if (!workspace) {
+export const rename = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name } = req.body;
+        const workspace = await Workspace.findById(id);
+        if (!workspace) {
          return res.status(404).json({
          message: 'Workspace not found'
          });
@@ -101,4 +104,3 @@ export const rename= async (req,res)=>{
     }
 }
 
-export { createWorkspaceController, getWorkspacesController, getWorkspaceByIdController, getWorkspaceMembersController, getWorkspaceMemberbyIdController, updateWorkspaceMemberRoleController, deleteWorkspaceController, getMyWorkspaces, removeMember, rename };

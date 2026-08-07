@@ -1,5 +1,6 @@
-import Workspace from "../models/Workspace";
-import User from "../models/User";
+import Workspace from "../models/Workspace.js";
+import User from "../models/User.js";
+import { emitToWorkspace } from "../config/socket.js";
 
 const createWorkspace = async (req, res) => {
     const { name, slug } = req.body;
@@ -39,8 +40,8 @@ const getWorkspaceById = async (req, res) => {
     const { id } = req.params;
     try {
         const workspace = await Workspace.findById(id)
-            .populate('owner', 'username email')
-            .populate('members.user', 'username email');
+            .populate('owner', 'username email avatar')
+            .populate('members.user', 'username email avatar');
         if (!workspace) {
             return res.status(404).json({ message: "Workspace not found" });
         }
@@ -53,7 +54,7 @@ const getWorkspaceById = async (req, res) => {
 const getWorkspaceMembers = async (req, res) => {
     const { id } = req.params;
     try {
-        const workspace = await Workspace.findById(id).populate('members.user', 'username email');
+        const workspace = await Workspace.findById(id).populate('members.user', 'username email avatar');
         if (!workspace) {
             return res.status(404).json({ message: "Workspace not found" });
         }
@@ -88,7 +89,9 @@ const updateWorkspaceMemberRole = async (req, res) => {
         if (!workspace) {
             return res.status(404).json({ message: "Workspace not found" });
         }
-        const member = workspace.members.find(m => m._id.toString() === memberId);
+        const member = workspace.members.find(
+            m => m.user.toString() === memberId
+        );
         if (!member) {
             return res.status(404).json({ message: "Member not found" });
         }
@@ -97,6 +100,8 @@ const updateWorkspaceMemberRole = async (req, res) => {
         }
         member.role = role;
         await workspace.save();
+        emitToWorkspace(id, 'member:roleChanged', { memberId, role });
+
         res.status(200).json(member);
     } catch (error) {
         res.status(500).json({ message: "Error updating workspace member role", error });

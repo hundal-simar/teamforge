@@ -1,9 +1,9 @@
 import express from 'express';
-import {createProject, listProjects} from '../controllers/projectController';
-import protect from '../middlewares/protect';
-import isMember from '../middlewares/isMember';
-import validate from '../middlewares/validate';
-import { createProjectSchema } from '../validators/project.validator';
+import {createProject, listProjects} from '../controllers/projectController.js';
+import protect from '../middlewares/protect.js';
+import isMember from '../middlewares/isMember.js';
+import validate from '../middlewares/validate.js';
+import { createProjectSchema } from '../validators/project.validator.js';
 
 const router = express.Router();
 

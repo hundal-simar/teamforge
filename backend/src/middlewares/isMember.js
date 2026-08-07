@@ -1,5 +1,5 @@
-import Workspace from '../models/Workspace';
-import User from '../models/User';
+import Workspace from '../models/Workspace.js';
+import User from '../models/User.js';
 
 const isMember = async (req, res, next) => {
   try {

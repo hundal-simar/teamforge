@@ -1,6 +1,7 @@
 import {useState, useEffect, createContext,useContext} from 'react';
 import api from '../api/axios';
 
+
 const AuthContext = createContext();
 
 export const AuthProvider = ({children})=>{
@@ -22,6 +23,14 @@ export const AuthProvider = ({children})=>{
     useEffect(()=>{
         fetchUser();
     },[]);
+
+    useEffect(() => {
+    const handleSessionExpired = () => {
+      setUser(null);
+    };
+    window.addEventListener('auth:sessionExpired', handleSessionExpired);
+    return () => window.removeEventListener('auth:sessionExpired', handleSessionExpired);
+  }, []);
 
     const login = async (credentials)=>{
         try{

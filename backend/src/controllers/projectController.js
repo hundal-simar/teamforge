@@ -1,6 +1,7 @@
-import Project from "../models/Project";
+import Project from "../models/Project.js";
 import { logActivity } from '../services/activityLogger.js';
 import { cacheDel, boardCacheKey } from '../utils/cache.js';
+import {emitToWorkspace} from '../config/socket.js';
 
 
 const DEFAULT_COLUMNS = [
@@ -11,7 +12,7 @@ const DEFAULT_COLUMNS = [
 
 // POST /api/workspaces/:id/projects
 
-const createProject = async (req, res) => {
+export const createProject = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description } = req.body;
@@ -22,8 +23,9 @@ const createProject = async (req, res) => {
       workspace: id,
       columns: DEFAULT_COLUMNS,
     });
-
-    const project = await Project.create({ /* ... */ });
+    
+    emitToWorkspace(id, 'project:created', project);
+    
     await logActivity({
     entityType: 'Project',
     entityId: project._id,
@@ -43,7 +45,7 @@ const createProject = async (req, res) => {
 };
 
 // GET /api/workspaces/:id/projects
-const listProjects = async (req, res) => {
+export const listProjects = async (req, res) => {
   try {
     const { id } = req.params;
     const projects = await Project.find({ workspace: id }).select('-columns');
@@ -56,12 +58,12 @@ const listProjects = async (req, res) => {
 
 // GET /api/projects/:id
 
-const getProjectDetail = async (req, res) => {
+export const getProjectDetail = async (req, res) => {
   res.status(200).json(req.project);
 };
 
 // PATCH /api/projects/:id/columns
-const updateColumns = async (req, res) => {
+export const updateColumns = async (req, res) => {
   try {
     const { columns } = req.body; 
     const project = req.project; 
@@ -85,4 +87,3 @@ const updateColumns = async (req, res) => {
   }
 };
 
-export default {createProject, listProjects, getProjectDetail, updateColumns};

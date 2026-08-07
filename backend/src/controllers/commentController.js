@@ -3,12 +3,10 @@ import { logActivity } from '../services/activityLogger.js';
 import { emitToProject } from '../config/socket.js';
 import { createNotification } from '../services/notificationService.js';
 
-
-// POST /api/tasks/:id/comments
-// isTaskMember already ran, attached req.task
-const createComment = async (req, res) => {
+export const createComment = async (req, res) => {
   try {
     const task = req.task;
+    const projectId = task.project._id.toString(); 
     const { text, mentions } = req.body;
 
     const comment = await Comment.create({
@@ -18,7 +16,7 @@ const createComment = async (req, res) => {
       mentions,
     });
 
-    const populated = await comment.populate('author', 'username email');
+    const populated = await comment.populate('author', 'username email avatar');
 
     await logActivity({
       entityType: 'Task',
@@ -28,22 +26,23 @@ const createComment = async (req, res) => {
       metadata: { commentId: comment._id, mentionCount: mentions.length },
     });
 
-    emitToProject(task.project.toString(), 'comment:added', populated);
+    emitToProject(projectId, 'comment:added', populated); 
 
     for (const mentionedUserId of mentions) {
-     if (mentionedUserId.toString() !== req.user._id.toString()) {
-     await createNotification({
-      userId: mentionedUserId,
-      type: 'mention',
-      payload: {
-        taskId: task._id.toString(),
-        projectId: task.project.toString(),
-        actorUsername: req.user.username,
-        commentId: comment._id.toString(),
-      },
-    });
-  }
-}
+      if (mentionedUserId.toString() !== req.user._id.toString()) {
+        await createNotification({
+          userId: mentionedUserId,
+          type: 'mention',
+          payload: {
+            taskId: task._id.toString(),
+            projectId, 
+            actorUsername: req.user.username,
+            actorAvatar: req.user.avatar || null,
+            commentId: comment._id.toString(),
+          },
+        });
+      }
+    }
 
     res.status(201).json(populated);
   } catch (err) {
@@ -52,13 +51,12 @@ const createComment = async (req, res) => {
   }
 };
 
-// GET /api/tasks/:id/comments
-const getComments = async (req, res) => {
+export const getComments = async (req, res) => {
   try {
     const { id: taskId } = req.params;
     const comments = await Comment.find({ task: taskId })
-      .populate('author', 'username email')
-      .populate('mentions', 'username email')
+      .populate('author', 'username email avatar')
+      .populate('mentions', 'username email avatar')
       .sort({ createdAt: 1 });
 
     res.status(200).json(comments);
@@ -68,15 +66,13 @@ const getComments = async (req, res) => {
   }
 };
 
-// DELETE /api/tasks/:id/comments/:commentId
-const deleteComment = async (req, res) => {
+export const deleteComment = async (req, res) => {
   try {
     const { commentId } = req.params;
     const comment = await Comment.findById(commentId);
 
     if (!comment) return res.status(404).json({ message: 'Comment not found' });
 
-    // only the author can delete their own comment
     if (comment.author.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'You can only delete your own comments' });
     }
@@ -84,13 +80,14 @@ const deleteComment = async (req, res) => {
     await comment.deleteOne();
 
     await logActivity({
-    entityType: 'Task',
-    entityId: req.task._id,
-    action: 'comment_deleted',
-    userId: req.user._id,
-    metadata: { commentId },
-  });
-    emitToProject(req.task.project.toString(), 'comment:deleted', { commentId, taskId: req.task._id });
+      entityType: 'Task',
+      entityId: req.task._id,
+      action: 'comment_deleted',
+      userId: req.user._id,
+      metadata: { commentId },
+    });
+
+    emitToProject(req.task.project._id.toString(), 'comment:deleted', { commentId, taskId: req.task._id }); 
 
     res.status(200).json({ message: 'Comment deleted' });
   } catch (err) {
@@ -98,5 +95,3 @@ const deleteComment = async (req, res) => {
     res.status(500).json({ message: 'Server error deleting comment' });
   }
 };
-
-export { createComment, getComments, deleteComment };

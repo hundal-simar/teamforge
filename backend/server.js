@@ -1,8 +1,8 @@
 import http from 'http';
 import app from './app.js'; 
-import { initSocket } from './socket/socketServer.js';
-import './queues/emailWorker.js'; 
-import { startDueDateReminderJob } from './jobs/dueDateReminderJob.js';
+import { initSocket } from './src/config/socket.js';
+import './src/queues/emailWorker.js'; 
+import { startDueDateReminderJob } from './src/jobs/dueDateReminderJob.js';
 
 
 const server = http.createServer(app); // wraps Express app in a plain HTTP server

@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import cloudinary from '../config/cloudinary.js';
-import { emitToProject } from '../socket/socketServer.js';
+import { emitToProject } from '../config/socket.js';
 import { cacheDel, boardCacheKey } from '../utils/cache.js';
 
 

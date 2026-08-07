@@ -25,6 +25,8 @@ export const SocketProvider = ({ children }) => {
     });
 
     socketInstance.on('connect', () => {
+      
+
       console.log('Socket connected');
       setConnected(true);
     });
@@ -35,6 +37,9 @@ export const SocketProvider = ({ children }) => {
     });
 
     socketInstance.on('connect_error', (err) => {
+      console.log(err);
+      console.log(err.message);
+      console.log(err.data);
       console.error('Socket connection error:', err.message);
     });
 

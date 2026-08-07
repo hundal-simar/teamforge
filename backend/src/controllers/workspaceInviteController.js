@@ -43,11 +43,23 @@ export const inviteTeammate = async (req, res) => {
     await workspace.save();
 
     const inviteLink = `${process.env.CLIENT_URL}/join/${token}`;
-   await emailQueue.add('invite', {
-   toEmail: email,
-   workspaceName: workspace.name,
-   inviteLink,
-  });
+
+    const queueWithTimeout = async (job, timeoutMs = 3000) => {
+     return Promise.race([
+    job,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Queue timeout')), timeoutMs)),
+    ]);
+   };
+
+  try {
+  await queueWithTimeout(
+    emailQueue.add('invite', { toEmail: email, workspaceName: workspace.name, inviteLink })
+  );
+  } catch (err) {
+  console.error('Failed to queue invite email (continuing anyway):', err.message);
+  }
+
+
     await logActivity({
     entityType: 'Workspace',
     entityId: workspace._id,
@@ -65,6 +77,7 @@ export const inviteTeammate = async (req, res) => {
 
 // POST /api/workspaces/join/:token
 export const acceptInvite = async (req, res) => {
+    console.log("JOIN CONTROLLER HIT");
   try {
     const { token } = req.params;
 
@@ -87,12 +100,17 @@ export const acceptInvite = async (req, res) => {
       });
     }
 
+    console.log("Invite entry:", inviteEntry);
+    console.log("Invited user:", invitedUser);
+
     const alreadyMember = workspace.members.some(
       (m) => m.user.toString() === invitedUser._id.toString()
     );
-
+    console.log("Already member:", alreadyMember);
     if (!alreadyMember) {
       // use the role stored on the invite token, not a hardcoded default
+      console.log("PUSHING MEMBER");
+
       workspace.members.push({ user: invitedUser._id, role: inviteEntry.role });
       await logActivity({
       entityType: 'Workspace',
@@ -102,9 +120,15 @@ export const acceptInvite = async (req, res) => {
       metadata: { role: inviteEntry.role },
     });
     }
+    console.log("Members after push:", workspace.members);
 
     workspace.inviteTokens = workspace.inviteTokens.filter((t) => t.token !== token);
     await workspace.save();
+
+    console.log("WORKSPACE SAVED");
+    const freshWorkspace = await Workspace.findById(workspace._id);
+
+    console.log("Members after save:", freshWorkspace.members);
 
     res.status(200).json({
       message: 'Successfully joined workspace',

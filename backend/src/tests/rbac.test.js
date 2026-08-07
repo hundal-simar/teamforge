@@ -1,7 +1,7 @@
 import request from 'supertest';
 import app from './helpers/testApp.js';
 import { registerAndLogin } from './helpers/createTestUser.js';
-import Workspace from '../models/workspaceModel.js'; 
+import Workspace from '../models/Workspace.js'; 
 
 describe('RBAC — workspace roles', () => {
   it('prevents a member from changing another member\'s role', async () => {
@@ -14,7 +14,7 @@ describe('RBAC — workspace roles', () => {
 
   const workspaceId = workspaceRes.body._id;
 
-  const User = (await import('../models/userModel.js')).default;
+  const User = (await import('../models/User.js')).default;
 
   const { cookie: memberACookie, userData: memberAData } = await registerAndLogin();
   const memberAUser = await User.findOne({ email: memberAData.email });
@@ -46,7 +46,7 @@ describe('RBAC — workspace roles', () => {
     const workspaceId = workspaceRes.body._id;
 
     const { userData: memberData } = await registerAndLogin();
-    const User = (await import('../models/userModel.js')).default;
+    const User = (await import('../models/User.js')).default;
     const memberUser = await User.findOne({ email: memberData.email });
 
     const workspace = await Workspace.findById(workspaceId);

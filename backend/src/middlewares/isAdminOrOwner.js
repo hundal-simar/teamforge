@@ -1,4 +1,4 @@
-import Workspace from '../models/workspaceModel.js';
+import Workspace from '../models/Workspace.js';
 
 const isAdminOrOwner = async (req, res, next) => {
   try {

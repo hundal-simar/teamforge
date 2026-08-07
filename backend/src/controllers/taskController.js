@@ -6,19 +6,14 @@ import { logActivity } from '../services/activityLogger.js';
 import { createNotification } from '../services/notificationService.js';
 import { cacheDel, boardCacheKey } from '../utils/cache.js';
 
+const ORDER_GAP = 1000;
 
-
-
-const ORDER_GAP = 1000; // initial spacing so early inserts don't need renormalizing soon
-
-// POST /api/projects/:id/tasks
-// isProjectMember already ran, attached req.project
-const createTask = async (req, res) => {
+// POST /api/projects/:id/tasks 
+export const createTask = async (req, res) => {
   try {
     const { id: projectId } = req.params;
     const { title, description, columnId, assignedTo, priority, dueDate, labels } = req.body;
 
-    // place new task at the end of the column
     const lastTask = await Task.findOne({ project: projectId, columnId })
       .sort({ order: -1 })
       .limit(1);
@@ -37,35 +32,43 @@ const createTask = async (req, res) => {
       labels,
     });
 
-    await task.save();
     await cacheDel(boardCacheKey(projectId));
-
     emitToProject(projectId, 'task:updated', task);
 
+    
+    if (assignedTo && assignedTo !== req.user._id.toString()) {
+      await createNotification({
+        userId: assignedTo,
+        type: 'assignment',
+        payload: {
+          taskId: task._id.toString(),
+          projectId,
+          actorUsername: req.user.username,
+          actorAvatar: req.user.avatar || null,
+        },
+      });
+    }
+
     await logActivity({
-    entityType: 'Task',
-    entityId: task._id,
-    action: 'task_created',
-    userId: req.user._id,
-    metadata: { title: task.title, columnId: task.columnId },
-  });
+      entityType: 'Task',
+      entityId: task._id,
+      action: 'task_created',
+      userId: req.user._id,
+      metadata: { title: task.title, columnId: task.columnId },
+    });
     res.status(201).json(task);
-
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error creating task' });
   }
 };
 
-// GET /api/projects/:id/tasks
-// isProjectMember already ran
-const listTasks = async (req, res) => {
+export const listTasks = async (req, res) => {
   try {
     const { id: projectId } = req.params;
     const tasks = await Task.find({ project: projectId })
-  .populate('assignedTo', 'username email')
-  .sort({ columnId: 1, order: 1 });
+      .populate('assignedTo', 'username email')
+      .sort({ columnId: 1, order: 1 });
     res.status(200).json(tasks);
   } catch (err) {
     console.error(err);
@@ -73,44 +76,47 @@ const listTasks = async (req, res) => {
   }
 };
 
-// PATCH /api/tasks/:id
-// isTaskMember already ran, attached req.task
-const updateTask = async (req, res) => {
+// PATCH /api/tasks/:id — isTaskMember already ran, task.project is POPULATED
+export const updateTask = async (req, res) => {
   try {
     const task = req.task;
+    const projectId = task.project._id.toString(); 
     const previousAssignee = task.assignedTo?.toString();
+
     if ('dueDate' in req.body) {
       const newDueDate = req.body.dueDate ? new Date(req.body.dueDate).toISOString() : null;
       const oldDueDate = task.dueDate ? task.dueDate.toISOString() : null;
-
       if (newDueDate !== oldDueDate) {
         task.remindedAt = null;
       }
     }
-    Object.assign(task, req.body); // only validated fields land here via Zod
-    await task.save();
-    await cacheDel(boardCacheKey(task.project.toString()));
 
+    Object.assign(task, req.body);
+    await task.save();
+    await cacheDel(boardCacheKey(projectId));
 
     if (req.body.assignedTo && req.body.assignedTo !== previousAssignee && req.body.assignedTo !== req.user._id.toString()) {
-    await createNotification({
-    userId: req.body.assignedTo,
-    type: 'assignment',
-    payload: {
-      taskId: task._id.toString(),
-      projectId: task.project.toString(),
-      actorUsername: req.user.username,
-    },
-  });
-}
+      await createNotification({
+        userId: req.body.assignedTo,
+        type: 'assignment',
+        payload: {
+          taskId: task._id.toString(),
+          projectId, // fixed
+          actorUsername: req.user.username,
+          actorAvatar: req.user.avatar || null,
+        },
+      });
+    }
+
     await logActivity({
-    entityType: 'Task',
-    entityId: task._id,
-    action: 'task_moved',
-    userId: req.user._id,
-    metadata: { toColumnId: task.columnId },
-  });
-    emitToProject(task.project.toString(), 'task:updated', task);
+      entityType: 'Task',
+      entityId: task._id,
+      action: 'task_moved',
+      userId: req.user._id,
+      metadata: { toColumnId: task.columnId },
+    });
+
+    emitToProject(projectId, 'task:updated', task); 
     res.status(200).json(task);
   } catch (err) {
     console.error(err);
@@ -118,20 +124,18 @@ const updateTask = async (req, res) => {
   }
 };
 
-// PATCH /api/tasks/:id/status
-// body: { columnId, order } — order is the float computed on the frontend
-// (average of the two neighboring tasks' order values in the target column)
-const updateTaskStatus = async (req, res) => {
+export const updateTaskStatus = async (req, res) => {
   try {
     const task = req.task;
+    const projectId = task.project._id.toString(); 
     const { columnId, order } = req.body;
 
     task.columnId = columnId;
     task.order = order;
     await task.save();
-    await cacheDel(boardCacheKey(task.project.toString()));
+    await cacheDel(boardCacheKey(projectId));
 
-    emitToProject(task.project.toString(), 'task:moved', task);
+    emitToProject(projectId, 'task:moved', task); 
     res.status(200).json(task);
   } catch (err) {
     console.error(err);
@@ -139,16 +143,16 @@ const updateTaskStatus = async (req, res) => {
   }
 };
 
-// POST /api/tasks/:id/subtasks
-const addSubtask = async (req, res) => {
+export const addSubtask = async (req, res) => {
   try {
-    const task = req.task; // attached by isTaskMember
+    const task = req.task;
+    const projectId = task.project._id.toString(); 
     const { title } = req.body;
 
     task.subtasks.push({ title, isDone: false });
     await task.save();
-    await cacheDel(boardCacheKey(task.project.toString()));
-    emitToProject(task.project.toString(), 'task:updated', task);
+    await cacheDel(boardCacheKey(projectId));
+    emitToProject(projectId, 'task:updated', task); 
     res.status(201).json(task);
   } catch (err) {
     console.error(err);
@@ -156,10 +160,10 @@ const addSubtask = async (req, res) => {
   }
 };
 
-// PATCH /api/tasks/:id/subtasks/:subtaskId/toggle
-const toggleSubtask = async (req, res) => {
+export const toggleSubtask = async (req, res) => {
   try {
     const task = req.task;
+    const projectId = task.project._id.toString(); 
     const { subtaskId } = req.params;
     const { isDone } = req.body;
 
@@ -168,8 +172,8 @@ const toggleSubtask = async (req, res) => {
 
     subtask.isDone = isDone;
     await task.save();
-    await cacheDel(boardCacheKey(task.project.toString()));
-    emitToProject(task.project.toString(), 'task:updated', task);
+    await cacheDel(boardCacheKey(projectId));
+    emitToProject(projectId, 'task:updated', task); 
     res.status(200).json(task);
   } catch (err) {
     console.error(err);
@@ -177,10 +181,10 @@ const toggleSubtask = async (req, res) => {
   }
 };
 
-// DELETE /api/tasks/:id/subtasks/:subtaskId
-const deleteSubtask = async (req, res) => {
+export const deleteSubtask = async (req, res) => {
   try {
     const task = req.task;
+    const projectId = task.project._id.toString(); 
     const { subtaskId } = req.params;
 
     const subtask = task.subtasks.id(subtaskId);
@@ -188,8 +192,8 @@ const deleteSubtask = async (req, res) => {
 
     subtask.deleteOne();
     await task.save();
-    await cacheDel(boardCacheKey(task.project.toString()));
-    emitToProject(task.project.toString(), 'task:updated', task);
+    await cacheDel(boardCacheKey(projectId));
+    emitToProject(projectId, 'task:updated', task); 
     res.status(200).json(task);
   } catch (err) {
     console.error(err);
@@ -197,19 +201,18 @@ const deleteSubtask = async (req, res) => {
   }
 };
 
-const getTaskDetail = async (req, res) => {
-  const task = await req.task.populate('assignedTo', 'username email');
+export const getTaskDetail = async (req, res) => {
+  const task = await req.task.populate('assignedTo', 'username email avatar');
   res.status(200).json(task);
 };
 
-const deleteTask = async (req, res) => {
+export const deleteTask = async (req, res) => {
   try {
     const task = req.task;
-    const projectId = task.project.toString();
+    const projectId = task.project._id.toString(); 
 
     await task.deleteOne();
     await cacheDel(boardCacheKey(projectId));
-
 
     await logActivity({
       entityType: 'Task',
@@ -232,7 +235,6 @@ export const searchTasks = async (req, res) => {
     const userId = req.user._id;
     const { search, assignee, priority } = req.query;
 
-    
     const myWorkspaces = await Workspace.find({
       $or: [{ owner: userId }, { 'members.user': userId }],
     }).distinct('_id');
@@ -256,5 +258,3 @@ export const searchTasks = async (req, res) => {
     res.status(500).json({ message: 'Server error searching tasks' });
   }
 };
-
-export { createTask, listTasks, updateTask, updateTaskStatus, addSubtask, toggleSubtask, deleteSubtask, getTaskDetail, deleteTask };

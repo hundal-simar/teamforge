@@ -1,23 +1,30 @@
-import axios from "axios";
+import axios from 'axios';
 
 const api = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: 'http://localhost:5000/api',
   withCredentials: true,
 });
 
-api.interceptors.request.use(
-  response=> response,
-  async (error)=>{
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
     const originalRequest = error.config;
-    if(error.response.status === 401 && !originalRequest._retry){
+    const isRefreshCall = originalRequest.url?.includes('/auth/refresh');
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isRefreshCall) {
       originalRequest._retry = true;
-      try{
-        await api.get("/auth/refresh");
+
+      try {
+        await api.post('/auth/refresh');
         return api(originalRequest);
-      }catch(err){
+      } catch (err) {
+        
+        window.dispatchEvent(new Event('auth:sessionExpired'));
         return Promise.reject(err);
       }
     }
+
+    return Promise.reject(error);
   }
 );
 

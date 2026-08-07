@@ -3,6 +3,8 @@ import Task from '../models/Task.js';
 import { emailQueue } from '../queues/emailQueue.js';
 
 export const startDueDateReminderJob = () => {
+  if (process.env.NODE_ENV === 'test') return;
+
   cron.schedule('0 * * * *', async () => {
     try {
       const now = new Date();
@@ -11,22 +13,25 @@ export const startDueDateReminderJob = () => {
       const dueSoonTasks = await Task.find({
         dueDate: { $gte: now, $lte: in24Hours },
         assignedTo: { $ne: null },
-        remindedAt: null, // only tasks that haven't been reminded yet
+        remindedAt: null,
       }).populate('assignedTo', 'username email');
 
       for (const task of dueSoonTasks) {
-        await emailQueue.add('due-date-reminder', {
-          toEmail: task.assignedTo.email,
-          taskTitle: task.title,
-          dueDate: task.dueDate,
-        });
+        if (emailQueue) {
+          await emailQueue.add('due-date-reminder', {
+            toEmail: task.assignedTo.email,
+            taskTitle: task.title,
+            dueDate: task.dueDate,
+          });
+        }
 
-        
         task.remindedAt = new Date();
         await task.save();
       }
 
-      console.log(`Due-date scan: queued ${dueSoonTasks.length} reminder(s)`);
+      console.log(
+        `Due-date scan: queued ${dueSoonTasks.length} reminder(s)`
+      );
     } catch (err) {
       console.error('Due-date reminder job failed:', err);
     }

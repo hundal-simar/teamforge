@@ -1,4 +1,4 @@
-import Workspace from "./Workspace";
+import Workspace from "./Workspace.js";
 import mongoose from "mongoose";
 
 const projectSchema = new mongoose.Schema({

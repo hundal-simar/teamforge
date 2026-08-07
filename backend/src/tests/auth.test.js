@@ -1,15 +1,19 @@
 import request from 'supertest';
 import app from './helpers/testApp.js';
+import { registerAndLogin } from './helpers/createTestUser.js';
 
 describe('Auth flow', () => {
   it('registers a new user', async () => {
+    console.log('Registering a new user...');
     const res = await request(app).post('/api/auth/register').send({
       username: 'alice',
       email: 'alice@example.com',
       password: 'Password123!',
     });
+    console.log('expecting res')
     expect(res.status).toBe(201);
     expect(res.body.message).toBe('User created successfully');
+    console.log('User registered successfully');
   });
 
   it('rejects registration with missing fields', async () => {

@@ -1,16 +1,15 @@
 import jwt from 'jsonwebtoken';
-import User from '../models/userModel.js';
+import User from '../models/User.js';
 
-const generateAccessToken = (userId) => {
+export const generateAccessToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.ACCESS_TOKEN_SECRET, {
     expiresIn: '15m',
   });
 }
 
-const generateRefreshToken = (userId) => {
+export const generateRefreshToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.REFRESH_TOKEN_SECRET, {
     expiresIn: '7d',
   });
 }
 
-export { generateAccessToken, generateRefreshToken };
