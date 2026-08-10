@@ -17,7 +17,7 @@ import BoardSkeleton from '../components/BoardSkeleton';
 import { computeOrder } from '../utils/ordering';
 import { useSocket } from '../context/SocketContext';
 import { fetchWorkspaceMembers } from '../features/workspace/workspaceSlice';
-import Breadcrumbs from '../components/Breadcrumbs';
+import BreadCrumbs from '../components/BreadCrumbs';
 import FilterBar from '../components/FilterBar';
 import { useSearchParams } from 'react-router-dom';
 import { DragOverlay } from '@dnd-kit/core';
@@ -175,7 +175,7 @@ export default function BoardPage() {
       <div className="flex-1 p-4 sm:p-6 space-y-6 overflow-x-auto relative z-10">
         
         {/* Breadcrumb Navigation */}
-        <Breadcrumbs
+        <BreadCrumbs
           items={[
             { label: project.workspace?.name || 'Workspace', to: `/workspaces/${project.workspace?._id}` },
             { label: project.name, to: `/projects/${projectId}` },

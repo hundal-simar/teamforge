@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-export default function Breadcrumbs({ items }) {
+export default function BreadCrumbs({ items }) {
   return (
     <nav className="flex items-center flex-wrap gap-1 text-xs text-zinc-400 mb-4 antialiased">
       {items.map((item, i) => (
