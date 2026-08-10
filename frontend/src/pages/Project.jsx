@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import api from '../api/axios';
 import { fetchWorkspaceById, fetchWorkspaceMembers } from '../features/workspace/workspaceSlice';
-import CreateProjectModal from '../components/CreateProjectModal';
+import CreateProjectModal from '../components/createProjectModal';
 import InviteTeammateModal from '../components/InviteTeammateModal';
 import Avatar from '../components/Avatar';
 import { useSocket } from '../context/SocketContext';
