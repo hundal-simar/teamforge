@@ -9,16 +9,24 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    const isRefreshCall = originalRequest.url?.includes('/auth/refresh');
 
-    if (error.response?.status === 401 && !originalRequest._retry && !isRefreshCall) {
+    const isAuthRoute =
+      originalRequest.url?.includes('/auth/me') ||
+      originalRequest.url?.includes('/auth/login') ||
+      originalRequest.url?.includes('/auth/register') ||
+      originalRequest.url?.includes('/auth/refresh');
+
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !isAuthRoute
+    ) {
       originalRequest._retry = true;
 
       try {
         await api.post('/auth/refresh');
         return api(originalRequest);
       } catch (err) {
-        
         window.dispatchEvent(new Event('auth:sessionExpired'));
         return Promise.reject(err);
       }
