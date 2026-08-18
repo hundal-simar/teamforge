@@ -1,11 +1,13 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Avatar from '../components/Avatar';
 import api from '../api/axios';
 
 export default function ProfilePage() {
   const { user, fetchUser } = useAuth();
-  const [usernameDraft, setUsernameDraft] = useState(user?.username || '');
+  useEffect(() => {
+    setUsernameDraft(user?.username || '');
+  }, [user]);
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [error, setError] = useState('');
