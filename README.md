@@ -2,7 +2,7 @@
 
 A real-time collaborative project management tool — Kanban boards with live updates, threaded comments with @mentions, notifications, and role-based workspace management.
 
-**Live demo:** teamforge-psi-nine.vercel.app
+**Live demo:** https://teamforge-psi-nine.vercel.app
 **Backend API:** https://teamforge-backend-z2ct.onrender.com
 
 ---
