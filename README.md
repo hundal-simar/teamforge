@@ -1,6 +1,6 @@
 # TeamForge
 
-A real-time collaborative project management tool — Kanban boards with live updates, threaded comments with @mentions, notifications, and role-based workspace management.
+A real-time collaborative project management tool — Kanban boards with live updates, threaded comments with @mentions, notifications, role-based workspace management, and an AI assistant that can answer questions about your workspace and take action on your behalf.
 
 **Live demo:** https://teamforge-psi-nine.vercel.app
 **Backend API:** https://teamforge-backend-z2ct.onrender.com
@@ -21,6 +21,14 @@ A real-time collaborative project management tool — Kanban boards with live up
 - Optimistic UI updates with automatic rollback on failure
 - Client-side filtering by assignee, priority, and label
 - Responsive board with horizontal scroll-snap on mobile
+
+### AI Assistant
+- Conversational assistant available from anywhere in the app, backed by Google Gemini
+- **Retrieval-augmented answers** — ingested docs/project content are chunked, embedded, and stored in MongoDB Atlas Vector Search; questions are answered from retrieved context with a tuned confidence threshold, so the assistant declines rather than hallucinates when nothing relevant is found
+- **Tool-calling for real actions** — the assistant can create and search tasks via natural language (e.g. "create a task to review the PR" or "what's still in progress?"), resolving to the user's own workspace/project/default column automatically rather than requiring every ID spelled out
+- **Workspace-scoped access control** — every tool call is checked against the requesting user's actual workspace membership before touching data, mirroring the same RBAC guarantees as the rest of the app
+- Redis-cached responses for repeat questions, cutting response latency from ~800ms to ~5ms on a cache hit
+- Defensive engineering throughout: request timeouts, per-user rate limiting, prompt-injection mitigation on retrieved content, and graceful fallback answers instead of raw errors when a step fails
 
 ### Real-Time Collaboration
 - Socket.io-powered live updates — task moves, new comments, and subtask changes appear instantly for every viewer, no refresh needed
@@ -74,6 +82,11 @@ A real-time collaborative project management tool — Kanban boards with live up
 - JWT (access + refresh tokens), bcrypt
 - Zod — request validation
 
+**AI**
+- Google Gemini API — chat, embeddings, and function/tool calling
+- MongoDB Atlas Vector Search — RAG retrieval over ingested content
+- Redis — response caching for repeat questions
+
 **Testing & Tooling**
 - Jest, Supertest, `mongodb-memory-server`
 - `node-cron` — scheduled jobs
@@ -89,6 +102,7 @@ A few design decisions worth calling out:
 - **Socket rooms scoped per-project and per-user** — task/comment events broadcast only to sockets in `project:<id>`, and notifications broadcast only to `user:<id>` — preventing cross-project noise and ensuring per-user data never leaks to other connected clients.
 - **Write-through cache invalidation** — the board endpoint's Redis cache is busted immediately after every mutation that affects it (task create/update/move/delete, column changes), not left to expire on a TTL alone.
 - **Middleware-layered permission checks** — `isMember` / `isOwner` / `isProjectMember` / `isTaskMember` each resolve the correct workspace context depending on how many references deep the requested resource sits (task → project → workspace), rather than duplicating permission logic in every controller.
+- **Tool-calling resolves defaults before asking the model to guess** — rather than requiring the LLM to chain multiple lookup calls (workspace → project → column) for a simple "create a task," the backend resolves the user's default project and column server-side, falling back to explicit lookups only when the user names something specific. Every resolved ID is still checked against the user's real workspace membership.
 
 ---
 
@@ -96,10 +110,11 @@ A few design decisions worth calling out:
 
 ### Prerequisites
 - Node.js 18+
-- MongoDB (local or Atlas)
+- MongoDB (local or Atlas, with Vector Search enabled)
 - Redis (local or Upstash)
 - A Cloudinary account
 - A Gmail account with an App Password (for Nodemailer)
+- A Google Gemini API key (free tier via [Google AI Studio](https://aistudio.google.com))
 
 ### Backend Setup
 
@@ -126,6 +141,8 @@ GMAIL_APP_PASSWORD=your_16_char_app_password
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
+
+GEMINI_API_KEY=your_gemini_api_key
 
 NODE_ENV=development
 ```
@@ -173,13 +190,13 @@ backend/
   routes/          # Express routers
   services/         # Activity logging, notifications, auth, workspace
   socket/          # Socket.io server + room logic
-  utils/           # Cache wrapper, mailer, ordering helpers
+  utils/           # Cache wrapper, mailer, ordering helpers, AI clients (Gemini, RAG, tool executor)
   validators/        # Zod schemas
   tests/           # Jest + Supertest suite
 
 frontend/
   src/
-    components/      # Reusable UI components
+    components/      # Reusable UI components, including the AI Assistant widget
     pages/          # Route-level pages
     context/         # Auth + Socket context providers
     features/        # Redux Toolkit slices
@@ -195,6 +212,8 @@ frontend/
 - Deduplicate due-date reminder emails more robustly across timezone edge cases
 - Add e2e tests (Playwright/Cypress) on top of the existing integration suite
 - Move avatar/attachment uploads to direct-to-Cloudinary signed uploads to reduce backend load
+- Semantic (not just exact-match) caching for AI responses, so differently-phrased questions can still hit the cache
+- Combine streaming with persisted conversation history for the AI Assistant (currently separate code paths)
+- Add evaluation metrics for the RAG pipeline beyond manual spot-checks
 
 ---
-
