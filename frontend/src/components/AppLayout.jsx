@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
+import AssistantWidget from './AssistantWidget';
 
 export default function AppLayout() {
   return (
@@ -15,6 +16,9 @@ export default function AppLayout() {
       <main className="flex-1 relative z-10">
         <Outlet />
       </main>
+
+      {/* AI Assistant */}
+      <AssistantWidget />
     </div>
   );
 }
