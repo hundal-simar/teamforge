@@ -1,6 +1,5 @@
 import { createTaskTool, allTools } from "./tools.js"; 
 import { executeTool } from "./toolExecutor.js";
-import { AI_CONFIG } from "../config/aiconfig.js";
 
 const BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
