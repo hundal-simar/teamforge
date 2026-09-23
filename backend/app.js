@@ -19,6 +19,7 @@ import notificationRoutes from './src/routes/notificationRoutes.js';
 import meRoutes from './src/routes/meRoutes.js';
 import userRoutes from './src/routes/userRoutes.js';
 import healthRoute from './src/routes/healthRoute.js';
+import chatRoutes from './src/routes/chatRoutes.js';
 
 dotenv.config();
 
@@ -66,6 +67,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/me', meRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api', healthRoute);
+app.use('/api/chat', chatRoutes);
 
 
 app.use((err, req, res, next) => {
