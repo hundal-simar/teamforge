@@ -1,4 +1,4 @@
-import { AI_CONFIG } from "../config/aiconfig.js"
+import { AI_CONFIG } from "../config/aiConfig.js"
 
 function chunkText(text, maxChunkSize = AI_CONFIG.chunking.maxChunkSize, overlap = AI_CONFIG.chunking.overlap) {
   const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);

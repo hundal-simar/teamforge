@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import KnowledgeChunk from "../models/KnowledgeChunk.js";
 import { getEmbedding } from "./geminiClient.js"; 
-import { AI_CONFIG } from "../config/aiconfig.js";
+import { AI_CONFIG } from "../config/aiConfig.js";
 
 async function retrieveRelevantChunks(question, limit = AI_CONFIG.retrieval.limit) {
   const queryVector = await getEmbedding(question);

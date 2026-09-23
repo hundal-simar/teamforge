@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import redis from "../config/redis.js";
 import { retrieveAndAnswer } from "./rag.js"; 
-import { AI_CONFIG } from "../config/aiconfig.js";      
+import { AI_CONFIG } from "../config/aiConfig.js";      
 
 const CACHE_TTL_SECONDS = AI_CONFIG.cache.ttlSeconds;
 

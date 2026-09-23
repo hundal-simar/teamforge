@@ -1,6 +1,6 @@
 import { retrieveRelevantChunks } from "./retrieve.js"; 
 import { askGemini } from "./geminiClient.js"; 
-import { AI_CONFIG } from "../config/aiconfig.js";
+import { AI_CONFIG } from "../config/aiConfig.js";
 
 const MIN_SCORE_THRESHOLD = AI_CONFIG.retrieval.minScoreThreshold;
 
